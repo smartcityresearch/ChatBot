@@ -1,6 +1,10 @@
-import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
-import { conversationTree } from './conversation.js';
-import { extractMessages } from './conversation.js';
+import {
+  LitElement,
+  html,
+  css,
+} from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
+import { conversationTree } from "./conversation.js";
+import { extractMessages } from "./conversation.js";
 
 class ChatBotComponent extends LitElement {
   static styles = css`
@@ -132,88 +136,101 @@ class ChatBotComponent extends LitElement {
   //   }
   // `;
 
-constructor() {
+  constructor() {
     super();
     this.popupActive = false;
     this.currentMessageIndex = 0;
     this.messages = extractMessages(conversationTree);
     this.currentOptions = conversationTree.options;
-    this.userInput = '';
-    
-}
-
-
-togglePopup(){
-  this.popupActive = !this.popupActive;
-  let popup = this.shadowRoot.getElementById('chat-pop');
-  if(this.popupActive){
-    this.currentMessageIndex = 0;
-    this.currentOptions = conversationTree.options;
-    this.userInput = '';
-      popup.classList.add('active');
-    }else {
-        popup.classList.remove('active');
+    this.userInput = "";
   }
-}
 
-handleUserInput(e) {
-  this.userInput = e.target.value;
-}
-
-sendMessage() {
-  const selectedOption = this.currentOptions.find(option => option.text === this.userInput);
-  if (selectedOption) {
-    this.currentMessageIndex++;
-    console.log(selectedOption);
-    console.log(conversationTree);
-    if (conversationTree.nodes.hasOwnProperty(selectedOption.next)) {
-      this.currentOptions = conversationTree.nodes[selectedOption.next].options;
-      this.messages = extractMessages(conversationTree);
+  togglePopup() {
+    this.popupActive = !this.popupActive;
+    let popup = this.shadowRoot.getElementById("chat-pop");
+    if (this.popupActive) {
+      this.currentMessageIndex = 0;
+      this.currentOptions = conversationTree.options;
+      this.userInput = "";
+      popup.classList.add("active");
     } else {
-      console.error(`Key "${selectedOption.next}" not found in conversationTree`);
-      this.messages.push('Error: Invalid next node');
-    }    
-    this.userInput = '';
-    // remove value from input
-    let inp = this.shadowRoot.querySelector('input');
-    inp.value = '';
-    console.log(this.messages);
-    this.populateMessages();
+      popup.classList.remove("active");
+    }
+  }
+
+  handleUserInput(e) {
+    this.userInput = e.target.value;
+  }
+
+  handleKeyDown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevent form submission
+      this.sendMessage();
+    }
+  }
+  sendMessage() {
+    const selectedOption = this.currentOptions.find(
+      (option) => option.text === this.userInput
+    );
+    if (selectedOption) {
+      this.currentMessageIndex++;
+      console.log(selectedOption);
+      console.log(conversationTree);
+      if (conversationTree.nodes.hasOwnProperty(selectedOption.next)) {
+        this.currentOptions =
+          conversationTree.nodes[selectedOption.next].options;
+        this.messages = extractMessages(conversationTree);
+      } else {
+        console.error(
+          `Key "${selectedOption.next}" not found in conversationTree`
+        );
+        this.messages.push("Error: Invalid next node");
+      }
+      this.userInput = "";
+      // remove value from input
+      let inp = this.shadowRoot.querySelector("input");
+      inp.value = "";
+      console.log(this.messages);
+      this.populateMessages();
+    }
+  }
+
+  populateMessages() {
+    //         ${this.messages.slice(0, this.currentMessageIndex + 1).map(message => html`<p>${message}</p>`)}
+    // and add to message-container
+    const messageContainer =
+      this.shadowRoot.getElementById("message-container");
+    messageContainer.innerHTML = "";
+    for (let i = 0; i <= this.currentMessageIndex; i++) {
+      const message = document.createElement("p");
+      message.textContent = this.messages[i];
+      messageContainer.appendChild(message);
+    }
+  }
+
+  render() {
+    return html`
+      <div class="chat-option" @click="${this.togglePopup}">
+        <i class="fas fa-comments"></i>
+      </div>
+      <div id="chat-pop" class="chatbot-popup">
+        <div id="message-container" class="messages">
+          ${this.messages
+            .slice(0, this.currentMessageIndex + 1)
+            .map((message) => html`<p>${message}</p>`)}
+        </div>
+        <div class="input-area">
+          <input
+            @keydown="${this.handleKeyDown}"
+            type="text"
+            @input="${this.handleUserInput}"
+            .value="${this.userInput}"
+          />
+          <button @click="${this.sendMessage}">Send</button>
+        </div>
+      </div>
+    `;
   }
 }
 
-populateMessages() {
-  //         ${this.messages.slice(0, this.currentMessageIndex + 1).map(message => html`<p>${message}</p>`)}
-  // and add to message-container
-  const messageContainer = this.shadowRoot.getElementById('message-container');
-  messageContainer.innerHTML = '';
-  for (let i = 0; i <= this.currentMessageIndex; i++) {
-    const message = document.createElement('p');
-    message.textContent = this.messages[i];
-    messageContainer.appendChild(message);
-  }
-}
-
-
-render() {
-  return html`
-    <div class="chat-option" @click="${this.togglePopup}">
-      <i class="fas fa-comments"></i>
-    </div>
-    <div id="chat-pop" class="chatbot-popup">
-      <div id="message-container" class="messages">
-      ${this.messages.slice(0, this.currentMessageIndex + 1).map(message => html`<p>${message}</p>`)}
-      </div>
-      <div class="input-area">
-        <input type="text" @input="${this.handleUserInput}" .value="${this.userInput}" />
-        <button @click="${this.sendMessage}">Send</button>
-      </div>
-    </div>
-  `;
-}
-}
-
-
-
-customElements.define('chat-bot-component', ChatBotComponent);
-
+customElements.define("chat-bot-component", ChatBotComponent);
