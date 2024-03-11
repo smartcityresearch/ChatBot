@@ -145,6 +145,7 @@ class ChatBotComponent extends LitElement {
     super();
     this.popupActive = false;
     this.currentMessageIndex = 0;
+    this.lastCorrectMessageIndex = 0;
     this.messages = [{ text: conversationTree.message, sender: "bot" }]; // Initialize with the bot's greeting message
     this.currentOptions = conversationTree.options;
     this.userInput = "";
@@ -154,7 +155,7 @@ class ChatBotComponent extends LitElement {
     this.popupActive = !this.popupActive;
     let popup = this.shadowRoot.getElementById("chat-pop");
     if (this.popupActive) {
-      this.currentMessageIndex = 0;
+      // this.currentMessageIndex = 0;
       this.currentOptions = conversationTree.options;
       this.userInput = "";
       popup.classList.add("active");
@@ -181,6 +182,7 @@ class ChatBotComponent extends LitElement {
     const selectedOption = this.currentOptions.find(option => option.text === userInputTrimmed);
     let nextNodeKey = "";
     let responseMessage = "";
+    let error = false;
   
     // Add user's message to the chat
     this.addMessage(userInputTrimmed, "user");
@@ -191,15 +193,26 @@ class ChatBotComponent extends LitElement {
       if (nextNode) {
         responseMessage = nextNode.message;
         this.currentOptions = nextNode.options; // Update options for the next interaction
+        this.currentMessageIndex++;
+        this.lastCorrectMessageIndex = this.currentMessageIndex;
       } else {
         responseMessage = "Error: Invalid next node";
+        error = true;
       }
     } else {
       responseMessage = "Error: Invalid option selected";
+      error = true;
     }
   
     // Add bot's response to the chat
     this.addMessage(responseMessage, "bot");
+
+    if (error) {
+      // Send the last message 
+      const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
+      this.addMessage(lastCorrectMessage.text, "bot");
+      error = false;
+    }
   
     // Reset userInput and update UI
     this.resetInputAndPopulateMessages();
