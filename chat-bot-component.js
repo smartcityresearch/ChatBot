@@ -177,43 +177,45 @@ class ChatBotComponent extends LitElement {
   }
 
   sendMessage() {
-    const selectedOption = this.currentOptions.find(
-      (option) => option.text === this.userInput.trim()
-    );
-
+    const userInputTrimmed = this.userInput.trim();
+    const selectedOption = this.currentOptions.find(option => option.text === userInputTrimmed);
+    let nextNodeKey = "";
+    let responseMessage = "";
+  
+    // Add user's message to the chat
+    this.addMessage(userInputTrimmed, "user");
+  
     if (selectedOption) {
-      // Append user's message
-      this.messages.push({ text: this.userInput, sender: "user" });
-
-      const nextNodeKey = selectedOption.next;
+      nextNodeKey = selectedOption.next;
       const nextNode = conversationTree.nodes[nextNodeKey];
-
       if (nextNode) {
-        // Append bot's response based on the selected option
-        this.messages.push({ text: nextNode.message, sender: "bot" });
-
-        // Update current options to the next node's options for the next round of interaction
-        this.currentOptions = nextNode.options;
+        responseMessage = nextNode.message;
+        this.currentOptions = nextNode.options; // Update options for the next interaction
       } else {
-        // If the next node does not exist, append an error message
-        this.messages.push({ text: "Error: Invalid next node", sender: "bot" });
+        responseMessage = "Error: Invalid next node";
       }
-
-      // Clear the userInput for the next input
-      this.userInput = "";
-      // Ensure the input field in the DOM is also cleared
-      const inputField = this.shadowRoot.querySelector("input");
-      if (inputField) inputField.value = "";
-
-      // Update the displayed messages
-      this.populateMessages();
-    }else{
-      this.messages.push({ text: this.userInput, sender: "user" });
-      this.userInput = "";
-      this.messages.push({ text: "Error: Invalid next node", sender: "bot" });
-      this.populateMessages();
+    } else {
+      responseMessage = "Error: Invalid option selected";
     }
+  
+    // Add bot's response to the chat
+    this.addMessage(responseMessage, "bot");
+  
+    // Reset userInput and update UI
+    this.resetInputAndPopulateMessages();
   }
+  
+  addMessage(text, sender) {
+    this.messages.push({ text, sender });
+  }
+  
+  resetInputAndPopulateMessages() {
+    this.userInput = ""; // Clear userInput for the next input
+    const inputField = this.shadowRoot.querySelector("input");
+    if (inputField) inputField.value = ""; // Clear input field in the DOM
+    this.populateMessages(); // Update displayed messages
+  }
+  
 
   populateMessages() {
     const messageContainer = this.shadowRoot.getElementById("message-container");
