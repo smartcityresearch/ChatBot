@@ -87,34 +87,34 @@ class ChatBotComponent extends LitElement {
       margin: 4px 0;
       align-items: center;
     }
-    
+
     .bot-row {
       justify-content: flex-start; /* Align bot messages to the left */
     }
-    
+
     .user-row {
       justify-content: flex-end; /* Align user messages to the right */
     }
-    
+
     .message {
       padding: 8px 12px;
       border-radius: 12px;
       max-width: 80%;
       display: inline-block;
     }
-    
+
     .bot-message {
-      background-color: #f0f0f0; /* Lighter gray for bot messages */
-      color: black;
+      background-color: #123462; /* Updated color for bot messages */
+      color: white; /* Adjust text color as needed for contrast */
       margin-left: 8px; /* Space between icon and message */
     }
-    
+
     .user-message {
       background-color: #007bff; /* Blue for user */
       color: white;
       margin-right: 8px; /* Space between icon and message */
     }
-    
+
     .icon {
       width: 30px;
       height: 30px;
@@ -124,20 +124,42 @@ class ChatBotComponent extends LitElement {
       justify-content: center;
       font-size: 14px;
     }
-    
+
     .bot-icon {
       background-color: #777; /* Darker shade for bot icon */
       color: #fff; /* White color for icon */
     }
-    
+
     .user-icon {
       background-color: #dedede; /* Light gray for the user icon background */
       color: #555; /* Icon color */
     }
-    
-    
+
     .input-area button:hover {
       background-color: #0056b3; /* Darker shade on hover for visual feedback */
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #123462;
+      color: #fff;
+      padding: 10px;
+    }
+
+    .chat-logo {
+      height: 30px; /* Adjust based on your logo's size */
+    }
+
+    .chat-title {
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .chat-close {
+      cursor: pointer;
+      font-size: 20px;
     }
   `;
 
@@ -179,14 +201,16 @@ class ChatBotComponent extends LitElement {
 
   sendMessage() {
     const userInputTrimmed = this.userInput.trim();
-    const selectedOption = this.currentOptions.find(option => option.text === userInputTrimmed);
+    const selectedOption = this.currentOptions.find(
+      (option) => option.text === userInputTrimmed
+    );
     let nextNodeKey = "";
     let responseMessage = "";
     let error = false;
-  
+
     // Add user's message to the chat
     this.addMessage(userInputTrimmed, "user");
-  
+
     if (selectedOption) {
       nextNodeKey = selectedOption.next;
       const nextNode = conversationTree.nodes[nextNodeKey];
@@ -203,50 +227,67 @@ class ChatBotComponent extends LitElement {
       responseMessage = "Error: Invalid option selected";
       error = true;
     }
-  
+
     // Add bot's response to the chat
     this.addMessage(responseMessage, "bot");
 
     if (error) {
-      // Send the last message 
+      // Send the last message
       const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
       this.addMessage(lastCorrectMessage.text, "bot");
       error = false;
     }
-  
+
     // Reset userInput and update UI
     this.resetInputAndPopulateMessages();
   }
-  
+
   addMessage(text, sender) {
     this.messages.push({ text, sender });
   }
-  
+
   resetInputAndPopulateMessages() {
     this.userInput = ""; // Clear userInput for the next input
     const inputField = this.shadowRoot.querySelector("input");
     if (inputField) inputField.value = ""; // Clear input field in the DOM
     this.populateMessages(); // Update displayed messages
   }
-  
 
   populateMessages() {
-    const messageContainer = this.shadowRoot.getElementById("message-container");
+    const messageContainer =
+      this.shadowRoot.getElementById("message-container");
     messageContainer.innerHTML = ""; // Clear previous messages
-  
+
     this.messages.forEach((msg) => {
       // Create a row to hold the icon and message
       const messageRow = document.createElement("div");
-      messageRow.className = msg.sender === "bot" ? "message-row bot-row" : "message-row user-row";
-  
+      messageRow.className =
+        msg.sender === "bot" ? "message-row bot-row" : "message-row user-row";
+
       const iconElement = document.createElement("div");
-      iconElement.className = msg.sender === "bot" ? "icon bot-icon" : "icon user-icon";
-      iconElement.innerHTML = msg.sender === "bot" ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
-  
+      iconElement.className =
+        msg.sender === "bot" ? "icon bot-icon" : "icon user-icon";
+      iconElement.innerHTML =
+        msg.sender === "bot"
+          ? '<i class="fas fa-robot"></i>'
+          : '<i class="fas fa-user"></i>';
+
+      // Create a container for the message text
       const messageBubble = document.createElement("div");
-      messageBubble.textContent = msg.text;
-      messageBubble.className = msg.sender === "bot" ? "message bot-message" : "message user-message";
-  
+      messageBubble.className =
+        msg.sender === "bot" ? "message bot-message" : "message user-message";
+
+      // Split message by '\n' and create a separate line for each part
+      msg.text.split("\n").forEach((part) => {
+        const line = document.createElement("div"); // You can also use <p> if preferred
+        line.textContent = part;
+        messageBubble.appendChild(line);
+      });
+
+      // const messageBubble = document.createElement("div");
+      // messageBubble.textContent = msg.text;
+      // messageBubble.className = msg.sender === "bot" ? "message bot-message" : "message user-message";
+
       if (msg.sender === "bot") {
         // For bot, icon then message
         messageRow.appendChild(iconElement);
@@ -256,18 +297,26 @@ class ChatBotComponent extends LitElement {
         messageRow.appendChild(messageBubble);
         messageRow.appendChild(iconElement);
       }
-  
+
       messageContainer.appendChild(messageRow);
     });
   }
-  
-  
+
   render() {
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <i class="fas fa-comments"></i>
       </div>
       <div id="chat-pop" class="chatbot-popup">
+        <div class="chat-header">
+          <img
+            src="assets/images/scrc-logo.png"
+            class="chat-logo"
+            alt="Chat Logo"
+          />
+          <div class="chat-title">SCRC Chat Assistant</div>
+          <div class="chat-close" @click="${this.togglePopup}">&times;</div>
+        </div>
         <div id="message-container" class="messages"></div>
         <div class="input-area">
           <input
