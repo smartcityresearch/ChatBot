@@ -81,66 +81,34 @@ class ChatBotComponent extends LitElement {
       outline: none; /* Remove default button focus outline */
     }
 
+    .bot-message {
+      background-color: #e0e0e0; /* Light gray for bot */
+      color: black;
+      padding: 8px;
+      margin: 4px 0;
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .user-message {
+      background-color: #007bff; /* Blue for user */
+      color: white;
+      padding: 8px;
+      margin: 4px;
+      border-radius: 10px;
+      text-align: right;
+    }
+
     .input-area button:hover {
       background-color: #0056b3; /* Darker shade on hover for visual feedback */
     }
   `;
-  // static styles = css`
-  //   .chat-option {
-  //     position: fixed;
-  //     bottom: 20px;
-  //     right: 20px;
-  //     width: 60px;
-  //     height: 60px;
-  //     border-radius: 50%;
-  //     background-color: #007bff;
-  //     color: #fff;
-  //     display: flex;
-  //     align-items: center;
-  //     justify-content: center;
-  //     cursor: pointer;
-  //     box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-  //     transition: transform 0.3s ease-out;
-  //   }
-
-  //   .chat-option:active {
-  //     transform: scale(1.2);
-  //   }
-
-  //   .chat-option i {
-  //     font-size: 20px;
-  //   }
-
-  //   .chatbot-popup {
-  //     position: absolute;
-  //     bottom: 60px;
-  //     right: 20px;
-  //     width: 300px;
-  //     height: 400px;
-  //     background-color: #fff;
-  //     border: 1px solid #ccc;
-  //     border-radius: 5px;
-  //     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  //     display: none;
-  //     overflow: auto;
-  //   }
-
-  //   .messages {
-  //     height: 300px;
-  //     padding: 10px;
-  //     overflow: auto;
-  //   }
-
-  //   .active {
-  //     display: block;
-  //   }
-  // `;
 
   constructor() {
     super();
     this.popupActive = false;
     this.currentMessageIndex = 0;
-    this.messages = extractMessages(conversationTree);
+    this.messages = [{ text: conversationTree.message, sender: "bot" }]; // Initialize with the bot's greeting message
     this.currentOptions = conversationTree.options;
     this.userInput = "";
   }
@@ -153,6 +121,7 @@ class ChatBotComponent extends LitElement {
       this.currentOptions = conversationTree.options;
       this.userInput = "";
       popup.classList.add("active");
+      this.populateMessages();
     } else {
       popup.classList.remove("active");
     }
@@ -170,42 +139,51 @@ class ChatBotComponent extends LitElement {
   }
   sendMessage() {
     const selectedOption = this.currentOptions.find(
-      (option) => option.text === this.userInput
+      (option) => option.text === this.userInput.trim()
     );
+
     if (selectedOption) {
-      this.currentMessageIndex++;
-      console.log(selectedOption);
-      console.log(conversationTree);
-      if (conversationTree.nodes.hasOwnProperty(selectedOption.next)) {
-        this.currentOptions =
-          conversationTree.nodes[selectedOption.next].options;
-        this.messages = extractMessages(conversationTree);
+      // Append user's message
+      this.messages.push({ text: this.userInput, sender: "user" });
+
+      const nextNodeKey = selectedOption.next;
+      const nextNode = conversationTree.nodes[nextNodeKey];
+
+      if (nextNode) {
+        // Append bot's response based on the selected option
+        this.messages.push({ text: nextNode.message, sender: "bot" });
+
+        // Update current options to the next node's options for the next round of interaction
+        this.currentOptions = nextNode.options;
       } else {
-        console.error(
-          `Key "${selectedOption.next}" not found in conversationTree`
-        );
-        this.messages.push("Error: Invalid next node");
+        // If the next node does not exist, append an error message
+        this.messages.push({ text: "Error: Invalid next node", sender: "bot" });
       }
+
+      // Clear the userInput for the next input
       this.userInput = "";
-      // remove value from input
-      let inp = this.shadowRoot.querySelector("input");
-      inp.value = "";
-      console.log(this.messages);
+      // Ensure the input field in the DOM is also cleared
+      const inputField = this.shadowRoot.querySelector("input");
+      if (inputField) inputField.value = "";
+
+      // Update the displayed messages
       this.populateMessages();
     }
   }
 
   populateMessages() {
-    //         ${this.messages.slice(0, this.currentMessageIndex + 1).map(message => html`<p>${message}</p>`)}
-    // and add to message-container
     const messageContainer =
       this.shadowRoot.getElementById("message-container");
-    messageContainer.innerHTML = "";
-    for (let i = 0; i <= this.currentMessageIndex; i++) {
-      const message = document.createElement("p");
-      message.textContent = this.messages[i];
-      messageContainer.appendChild(message);
-    }
+    messageContainer.innerHTML = ""; // Clear previous messages
+
+    this.messages.forEach((msg) => {
+      const messageElement = document.createElement("div");
+      messageElement.textContent = msg.text;
+      // Assign class based on sender for styling
+      messageElement.className =
+        msg.sender === "bot" ? "bot-message" : "user-message";
+      messageContainer.appendChild(messageElement);
+    });
   }
 
   render() {
@@ -215,9 +193,6 @@ class ChatBotComponent extends LitElement {
       </div>
       <div id="chat-pop" class="chatbot-popup">
         <div id="message-container" class="messages">
-          ${this.messages
-            .slice(0, this.currentMessageIndex + 1)
-            .map((message) => html`<p>${message}</p>`)}
         </div>
         <div class="input-area">
           <input
