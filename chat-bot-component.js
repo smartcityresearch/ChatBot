@@ -81,24 +81,61 @@ class ChatBotComponent extends LitElement {
       outline: none; /* Remove default button focus outline */
     }
 
-    .bot-message {
-      background-color: #e0e0e0; /* Light gray for bot */
-      color: black;
-      padding: 8px;
+    .message-row {
+      display: flex;
+      width: 100%;
       margin: 4px 0;
-      border-radius: 10px;
-      text-align: left;
+      align-items: center;
     }
-
+    
+    .bot-row {
+      justify-content: flex-start; /* Align bot messages to the left */
+    }
+    
+    .user-row {
+      justify-content: flex-end; /* Align user messages to the right */
+    }
+    
+    .message {
+      padding: 8px 12px;
+      border-radius: 12px;
+      max-width: 80%;
+      display: inline-block;
+    }
+    
+    .bot-message {
+      background-color: #f0f0f0; /* Lighter gray for bot messages */
+      color: black;
+      margin-left: 8px; /* Space between icon and message */
+    }
+    
     .user-message {
       background-color: #007bff; /* Blue for user */
       color: white;
-      padding: 8px;
-      margin: 4px;
-      border-radius: 10px;
-      text-align: right;
+      margin-right: 8px; /* Space between icon and message */
     }
-
+    
+    .icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    
+    .bot-icon {
+      background-color: #777; /* Darker shade for bot icon */
+      color: #fff; /* White color for icon */
+    }
+    
+    .user-icon {
+      background-color: #dedede; /* Light gray for the user icon background */
+      color: #555; /* Icon color */
+    }
+    
+    
     .input-area button:hover {
       background-color: #0056b3; /* Darker shade on hover for visual feedback */
     }
@@ -122,6 +159,7 @@ class ChatBotComponent extends LitElement {
       this.userInput = "";
       popup.classList.add("active");
       this.populateMessages();
+      a;
     } else {
       popup.classList.remove("active");
     }
@@ -137,6 +175,7 @@ class ChatBotComponent extends LitElement {
       this.sendMessage();
     }
   }
+
   sendMessage() {
     const selectedOption = this.currentOptions.find(
       (option) => option.text === this.userInput.trim()
@@ -168,32 +207,53 @@ class ChatBotComponent extends LitElement {
 
       // Update the displayed messages
       this.populateMessages();
+    }else{
+      this.messages.push({ text: this.userInput, sender: "user" });
+      this.userInput = "";
+      this.messages.push({ text: "Error: Invalid next node", sender: "bot" });
+      this.populateMessages();
     }
   }
 
   populateMessages() {
-    const messageContainer =
-      this.shadowRoot.getElementById("message-container");
+    const messageContainer = this.shadowRoot.getElementById("message-container");
     messageContainer.innerHTML = ""; // Clear previous messages
-
+  
     this.messages.forEach((msg) => {
-      const messageElement = document.createElement("div");
-      messageElement.textContent = msg.text;
-      // Assign class based on sender for styling
-      messageElement.className =
-        msg.sender === "bot" ? "bot-message" : "user-message";
-      messageContainer.appendChild(messageElement);
+      // Create a row to hold the icon and message
+      const messageRow = document.createElement("div");
+      messageRow.className = msg.sender === "bot" ? "message-row bot-row" : "message-row user-row";
+  
+      const iconElement = document.createElement("div");
+      iconElement.className = msg.sender === "bot" ? "icon bot-icon" : "icon user-icon";
+      iconElement.innerHTML = msg.sender === "bot" ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
+  
+      const messageBubble = document.createElement("div");
+      messageBubble.textContent = msg.text;
+      messageBubble.className = msg.sender === "bot" ? "message bot-message" : "message user-message";
+  
+      if (msg.sender === "bot") {
+        // For bot, icon then message
+        messageRow.appendChild(iconElement);
+        messageRow.appendChild(messageBubble);
+      } else {
+        // For user, message then icon
+        messageRow.appendChild(messageBubble);
+        messageRow.appendChild(iconElement);
+      }
+  
+      messageContainer.appendChild(messageRow);
     });
   }
-
+  
+  
   render() {
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <i class="fas fa-comments"></i>
       </div>
       <div id="chat-pop" class="chatbot-popup">
-        <div id="message-container" class="messages">
-        </div>
+        <div id="message-container" class="messages"></div>
         <div class="input-area">
           <input
             @keydown="${this.handleKeyDown}"
