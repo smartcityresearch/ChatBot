@@ -10,28 +10,26 @@ const conversationTree = {
       BuildingNode: {
         message: "You chose Building Specific Data. Please select a vertical by entering the corresponding number:\n1. Air Quality\n2. Energy monitoring\n3. Solar\n4. Smart Room\n5. Weather\n6. Weather Monitoring\n7. WiSun\n8. Crowd Monitoring",
         options: [
-          { text: "1", next: "CommonBuildingNode" },
-          { text: "2", next: "CommonBuildingNode" },
-          { text: "3", next: "CommonBuildingNode" },
-          { text: "4", next: "CommonBuildingNode" },
-          { text: "5", next: "CommonBuildingNode" },
-          { text: "6", next: "CommonBuildingNode" },
-          { text: "7", next: "CommonBuildingNode" },
-          { text: "8", next: "CommonBuildingNode" },
-          // ... other vertical options ...
+          { text: "1", next: "CommonBuildingNode", identifier: "AQ" },
+          { text: "2", next: "CommonBuildingNode", identifier: "EM" },
+          { text: "3", next: "CommonBuildingNode", identifier: "SL" },
+          { text: "4", next: "CommonBuildingNode", identifier: "SR" },
+          { text: "5", next: "CommonBuildingNode", identifier: "WE" },
+          { text: "6", next: "CommonBuildingNode", identifier: "WM" },
+          { text: "7", next: "CommonBuildingNode", identifier: "WN" },
+          { text: "8", next: "CommonBuildingNode", identifier: "CM" },
         ],
       },
     
       CommonBuildingNode: {
         message: "Which building data do you need? Please select a building by entering the corresponding number:\n1. Vindhya\n2. Nilgiri\n3. Admin\n4. T-Hub\n5. Kohli\n6. Anand",
         options: [
-          { text: "1", next: "CommonNode" },
-          { text: "2", next: "CommonNode" },
-          { text: "3", next: "CommonNode" },
-          { text: "4", next: "CommonNode" },
-          { text: "5", next: "CommonNode" },
-          { text: "6", next: "CommonNode" },
-          // ... other building options ...
+          { text: "1", next: "CommonNode", terminate: true, identifier: "VN" },
+          { text: "2", next: "CommonNode", terminate: true, identifier: "NI" },
+          { text: "3", next: "CommonNode", terminate: true, identifier: "AD" },
+          { text: "4", next: "CommonNode", terminate: true, identifier: "TH" },
+          { text: "5", next: "CommonNode", terminate: true, identifier: "KB" },
+          { text: "6", next: "CommonNode", terminate: true, identifier: "AN" },
         ],
       },
       
@@ -47,24 +45,23 @@ const conversationTree = {
       VerticalNode: {
         message: "You chose Vertical Specific Data. Please select a vertical by entering the corresponding number:\n1. Air Quality\n2. Energy monitoring\n3. Solar\n4. Smart Room\n5. Weather\n6. Weather Monitoring\n7. WiSun\n8. Crowd Monitoring",
         options: [
-          { text: "1", next: "CommonVerticalNode" },
-          { text: "2", next: "CommonVerticalNode" },
-          { text: "3", next: "CommonVerticalNode" },
-          { text: "4", next: "CommonVerticalNode" },
-          { text: "5", next: "CommonVerticalNode" },
-          { text: "6", next: "CommonVerticalNode" },
-          { text: "7", next: "CommonVerticalNode" },
-          { text: "8", next: "CommonVerticalNode" },
-          // ... other vertical options ...
+          { text: "1", next: "CommonVerticalNode", identifier: "AQ" },
+          { text: "2", next: "CommonVerticalNode", identifier: "EM" },
+          { text: "3", next: "CommonVerticalNode", identifier: "SL" },
+          { text: "4", next: "CommonVerticalNode", identifier: "SR" },
+          { text: "5", next: "CommonVerticalNode", identifier: "WE" },
+          { text: "6", next: "CommonVerticalNode", identifier: "WM" },
+          { text: "7", next: "CommonVerticalNode", identifier: "WN" },
+          { text: "8", next: "CommonVerticalNode", identifier: "CM" },
         ],
       },
       
       CommonVerticalNode: {
         message: "Which value do you need? Please select an option by entering the corresponding number:\n1. Average value\n2. Maximum value\n3. Minimum value",
         options: [
-          { text: "1", next: "CommonNode" },
-          { text: "2", next: "CommonNode" },
-          { text: "3", next: "CommonNode" },
+          { text: "1", next: "CommonNode", terminate: true},
+          { text: "2", next: "CommonNode", terminate: true},
+          { text: "3", next: "CommonNode", terminate: true},
           // ... other value options ...
         ],
       },
@@ -93,9 +90,7 @@ const conversationTree = {
           { text: "4", identifier: "TH", next: "FloorNode" },
           { text: "5", identifier: "KB", next: "FloorNode" },
           { text: "6", identifier: "AN", next: "FloorNode" },
-          // ... other building options ...
-        ],
-      
+        ],      
     },
     FloorNode: {
       message: "Please select a floor by entering the corresponding number:\n1.Ground floor \n2. First floor\n3. Second floor\n4.Third floor\n5. Fourth floor\n6. Library\n7. Computer Lab\n8. Overhead Tank \n9.SS Tank \n10. Sump\n11.Parking\n",
@@ -119,6 +114,7 @@ const conversationTree = {
       message: "Type the node ID:",
       input: true,
       next: "CommonNode",
+      terminate: true,
     },
   
   }

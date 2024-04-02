@@ -51,7 +51,7 @@ class ChatBotComponent extends LitElement {
     }
 
     .messages {
-      height: 250px; /* Adjusted for better message visibility */
+      height: 300px; /* Adjusted for better message visibility */
       padding: 10px;
       overflow-y: auto; /* Enable vertical scrolling */
     }
@@ -170,6 +170,9 @@ class ChatBotComponent extends LitElement {
     this.messages = [{ text: conversationTree.message, sender: "bot" }]; // Initialize with the bot's greeting message
     this.currentOptions = conversationTree.options;
     this.userInput = "";
+    this.buildingIdentifier = ''; // To store building identifier
+    this.verticalIdentifier = ''; // To store vertical identifier
+    this.floorIdentifier = ''; // To store floor identifier
   }
 
   togglePopup() {
@@ -181,7 +184,6 @@ class ChatBotComponent extends LitElement {
       this.userInput = "";
       popup.classList.add("active");
       this.populateMessages();
-      a;
     } else {
       popup.classList.remove("active");
     }
@@ -191,6 +193,66 @@ class ChatBotComponent extends LitElement {
     this.userInput = e.target.value;
   }
 
+  async fetchDataAndAskContinue(buildingIdentifier, verticalIdentifier, floorIdentifier) {
+    // fetch data from url
+    const latest_data_url=new URL('https://ctop-sub.vjspranav.dev/latest')
+    const options = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    // Fetch data from the API
+    let response = await fetch(latest_data_url, options);
+
+    let data = await response.json();
+
+    const data_dict = Object.values(data).flat().reduce((acc, element) => {
+      acc[element.node_id] = element;
+      return acc;
+    }, {});
+    
+    let filteredNodes = Object.values(data_dict);
+    // Check if vertical
+    if (verticalIdentifier) {
+      // get all with node_id starting with verticalIdentifier or if first 4 letters have verticalIdentifier
+      filteredNodes = Object.values(data_dict).filter(node => node.node_id.startsWith(verticalIdentifier) || node.node_id.slice(0, 4).includes(verticalIdentifier));
+    }
+    // Check if building
+    if (buildingIdentifier) {
+      // getall nodes in filtered nodes which have buildingIdentifier in their node_id
+      filteredNodes = filteredNodes.filter(node => node.node_id.includes(buildingIdentifier));
+    }
+    // Check if floor
+    if (floorIdentifier) {
+      // getall nodes in filtered nodes which have floorIdentifier in their node_id
+      filteredNodes = filteredNodes.filter(node => node.node_id.includes(floorIdentifier));
+    }
+
+    // if 0 nodes found, return No data found
+    if (filteredNodes.length === 0) {
+      this.addMessage("No data found for the identifiers: Building - " + buildingIdentifier + ", Vertical - " + verticalIdentifier + ", Floor - " + floorIdentifier, "bot");
+      return false;
+    }
+
+    // if more than 1 node is found return the first node
+    if (filteredNodes.length >= 1) {
+      let node = filteredNodes[0];
+      // there are key:value, print them beautifully
+      let responseMessage = "Data fetched for the identifiers: Building - " + buildingIdentifier + ", Vertical - " + verticalIdentifier + ", Floor - " + floorIdentifier + "\n";
+      for (const [key, value] of Object.entries(node)) {
+        responseMessage += key + ": " + value + "\n";
+      }
+      this.addMessage(responseMessage, "bot");
+      return false;
+    }
+
+    // Fetch data based on identifiers and return true or false
+    return true;
+  }
+
+
   handleKeyDown(e) {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevent form submission
@@ -198,7 +260,7 @@ class ChatBotComponent extends LitElement {
     }
   }
 
-  sendMessage() {
+  async sendMessage() {
     const userInputTrimmed = this.userInput.trim();
     const selectedOption = this.currentOptions.find(
       (option) => option.text === userInputTrimmed
@@ -212,6 +274,40 @@ class ChatBotComponent extends LitElement {
 
     if (selectedOption) {
       nextNodeKey = selectedOption.next;
+
+      // Capture identifiers for Building and Vertical selections
+      // check last message to identify the selection
+      let lastBotMessage = this.messages[this.messages.length - 2].text;
+      console.log("Last bot message: " + lastBotMessage);
+      console.log(selectedOption)
+      if (selectedOption.identifier) {
+        console.log("Selected option identifier: " + selectedOption.identifier);
+        if (lastBotMessage.includes("Which building data do you need?")) {
+          this.buildingIdentifier = selectedOption.identifier;
+        } else if (lastBotMessage.includes("Please select a floor by entering")) {
+          this.floorIdentifier = selectedOption.identifier;
+        }else if (lastBotMessage.includes("Please select a vertical")) {
+          this.verticalIdentifier = selectedOption.identifier;
+        }
+      }
+
+      console.log("Identifiers: Building - " + this.buildingIdentifier + ", Vertical - " + this.verticalIdentifier + ", Floor - " + this.floorIdentifier);
+
+      if (selectedOption.terminate) {
+        let continueConversation = await this.fetchDataAndAskContinue(this.buildingIdentifier, this.verticalIdentifier, this.floorIdentifier);
+        if (!continueConversation) {
+          // Send message to end the conversation
+          this.addMessage("Thank you for using the chatbot. Have a great day!", "bot");
+          this.resetInputAndPopulateMessages();
+          return;
+        }
+
+        // Reset identifiers when the conversation ends
+        this.buildingIdentifier = '';
+        this.verticalIdentifier = '';
+        this.floorIdentifier = '';
+      }
+
       const nextNode = conversationTree.nodes[nextNodeKey];
       if (nextNode) {
         responseMessage = nextNode.message;
