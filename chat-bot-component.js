@@ -43,31 +43,43 @@ class DataProcessor {
 
   // General aggregation function
   aggregateData(method) {
-    const ignoreKeys = ['node_id', 'name', 'latitude', 'longitude', 'xcor', 'ycor', 'type'];
+    const ignoreKeys = [
+      "node_id",
+      "name",
+      "latitude",
+      "longitude",
+      "xcor",
+      "ycor",
+      "type",
+    ];
     const results = {};
 
     Object.keys(this.data[0])
-      .filter(key => !ignoreKeys.includes(key))
-      .forEach(key => {
-        const rawValues = this.data.map(node => node[key]);
+      .filter((key) => !ignoreKeys.includes(key))
+      .forEach((key) => {
+        const rawValues = this.data.map((node) => node[key]);
         const values = rawValues.map(this.parseValue);
 
         // Split data types
-        const numericValues = values.filter(value => typeof value === 'number');
-        const nonNumericValues = values.filter(value => typeof value !== 'number');
+        const numericValues = values.filter(
+          (value) => typeof value === "number"
+        );
+        const nonNumericValues = values.filter(
+          (value) => typeof value !== "number"
+        );
 
         if (numericValues.length === 0) {
           results[key] = this.findMode(nonNumericValues);
           return;
-        } 
+        }
         switch (method) {
-          case 'avg':
+          case "avg":
             results[key] = this.calculateAverage(numericValues);
             break;
-          case 'max':
+          case "max":
             results[key] = Math.max(...numericValues);
             break;
-          case 'min':
+          case "min":
             results[key] = Math.min(...numericValues);
             break;
         }
@@ -126,6 +138,11 @@ class ChatBotComponent extends LitElement {
       height: 300px; /* Adjusted for better message visibility */
       padding: 10px;
       overflow-y: auto; /* Enable vertical scrolling */
+    }
+
+    .message a {
+      color: #ff8400; /* White color for links */
+      text-decoration: none; /* Remove underline from links */
     }
 
     .input-area {
@@ -351,7 +368,7 @@ class ChatBotComponent extends LitElement {
       );
     }
 
-      // Check nodeIdentifier
+    // Check nodeIdentifier
     if (nodeIdentifier) {
       // get node with node_id equal to nodeIdentifier
       filteredNodes = filteredNodes.filter(
@@ -362,13 +379,18 @@ class ChatBotComponent extends LitElement {
         let closestMatch = "";
         let minDistance = Number.MAX_SAFE_INTEGER;
         for (const node of Object.values(data_dict)) {
-          const distance = this.getLevenshteinDistance(node.node_id, nodeIdentifier);
+          const distance = this.getLevenshteinDistance(
+            node.node_id,
+            nodeIdentifier
+          );
           if (distance < minDistance) {
             minDistance = distance;
             closestMatch = node.node_id;
           }
         }
-        console.log("Closest match: " + closestMatch + " with distance: " + minDistance);
+        console.log(
+          "Closest match: " + closestMatch + " with distance: " + minDistance
+        );
         this.addMessage(
           `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
           "bot"
@@ -429,14 +451,71 @@ class ChatBotComponent extends LitElement {
       } else {
         responseMessage += "Data for the identifiers: \n";
       }
-      filteredNodes.forEach((node, index) => {
-        if (!accumulator) responseMessage += `${node['node_id']}:\n`;
-        for (const [key, value] of Object.entries(node)) {
-          responseMessage += key + ": " + value + "\n";
+
+      // Create a markdown table for better readability
+      // Add title and identifier names before the table
+      let mkdwnTable = "# Data For the Identifiers:\n";
+      if (buildingIdentifier) {
+        mkdwnTable += "Building: " + buildingIdentifier + "\n";
+      }
+      if (verticalIdentifier) {
+        mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
+      }
+      if (floorIdentifier) {
+        mkdwnTable += "Floor: " + floorIdentifier + "\n";
+      }
+      mkdwnTable += "\n";
+
+      if (filteredNodes.length > 1) {
+        mkdwnTable += "|";
+        for (const key of Object.keys(filteredNodes[0])) {
+          mkdwnTable += key + "|";
         }
-        responseMessage += "\n"; // Add a newline between nodes
+        mkdwnTable += "\n|";
+        for (const key of Object.keys(filteredNodes[0])) {
+          mkdwnTable += "-|";
+        }
+        mkdwnTable += "\n";
+        for (const node of filteredNodes) {
+          for (const value of Object.values(node)) {
+            mkdwnTable += value + "|";
+          }
+          mkdwnTable += "\n";
+        }
+      }
+
+      // Post to stagbin
+      const response = await fetch("https://api.stagb.in/dev/content", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          data: mkdwnTable,
+        }),
       });
+      console.log(response);
+      const responseJson = await response.json();
+      console.log(responseJson);
+
+      // Get the first node
+      let node = filteredNodes[0];
+
+      // Initialize the response message
+      responseMessage += `${node["node_id"]}:\n`;
+
+      // Iterate over the properties of the node
+      for (const [key, value] of Object.entries(node)) {
+        responseMessage += key + ": " + value + "\n";
+      }
+
       this.addMessage(responseMessage, "bot");
+
+      // Add table link to the chat
+      this.addMessage(
+        `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
+        "bot"
+      );
       return false;
     }
 
@@ -530,7 +609,7 @@ class ChatBotComponent extends LitElement {
           this.buildingIdentifier,
           this.verticalIdentifier,
           this.floorIdentifier,
-          this.acc,
+          this.acc
         );
         if (!continueConversation) {
           // Send message to end the conversation
@@ -615,7 +694,7 @@ class ChatBotComponent extends LitElement {
       // Split message by '\n' and create a separate line for each part
       msg.text.split("\n").forEach((part) => {
         const line = document.createElement("div"); // You can also use <p> if preferred
-        line.textContent = part;
+        line.innerHTML = part; // Use innerHTML instead of textContent
         messageBubble.appendChild(line);
       });
 
