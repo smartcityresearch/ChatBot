@@ -173,6 +173,7 @@ class ChatBotComponent extends LitElement {
     this.buildingIdentifier = ""; // To store building identifier
     this.verticalIdentifier = ""; // To store vertical identifier
     this.floorIdentifier = ""; // To store floor identifier
+    this.stringInput = false;
   }
 
   togglePopup() {
@@ -193,10 +194,38 @@ class ChatBotComponent extends LitElement {
     this.userInput = e.target.value;
   }
 
+  getLevenshteinDistance(a, b) {
+    const distanceMatrix = Array(a.length + 1)
+      .fill(null)
+      .map(() => Array(b.length + 1).fill(null));
+
+    for (let i = 0; i <= a.length; i++) {
+      distanceMatrix[i][0] = i;
+    }
+
+    for (let j = 0; j <= b.length; j++) {
+      distanceMatrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+        distanceMatrix[i][j] = Math.min(
+          distanceMatrix[i - 1][j] + 1,
+          distanceMatrix[i][j - 1] + 1,
+          distanceMatrix[i - 1][j - 1] + indicator
+        );
+      }
+    }
+
+    return distanceMatrix[a.length][b.length];
+  }
+
   async fetchDataAndAskContinue(
     buildingIdentifier,
     verticalIdentifier,
-    floorIdentifier
+    floorIdentifier,
+    nodeIdentifier = false
   ) {
     // fetch data from url
     const latest_data_url = new URL(
@@ -248,17 +277,60 @@ class ChatBotComponent extends LitElement {
       );
     }
 
+      // Check nodeIdentifier
+    if (nodeIdentifier) {
+      // get node with node_id equal to nodeIdentifier
+      filteredNodes = filteredNodes.filter(
+        (node) => node.node_id === nodeIdentifier
+      );
+      // If no node found, try to find the closest match using Levenshtein distance
+      if (filteredNodes.length === 0) {
+        let closestMatch = "";
+        let minDistance = Number.MAX_SAFE_INTEGER;
+        for (const node of Object.values(data_dict)) {
+          const distance = this.getLevenshteinDistance(node.node_id, nodeIdentifier);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestMatch = node.node_id;
+          }
+        }
+        console.log("Closest match: " + closestMatch + " with distance: " + minDistance);
+        this.addMessage(
+          `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
+          "bot"
+        );
+
+        // Show the data for the closest match
+        filteredNodes = Object.values(data_dict).filter(
+          (node) => node.node_id === closestMatch
+        );
+      }
+    }
+
     // if 0 nodes found, return No data found
     if (filteredNodes.length === 0) {
-      this.addMessage(
-        "No data found for the identifiers: Building - " +
-          buildingIdentifier +
-          ", Vertical - " +
-          verticalIdentifier +
-          ", Floor - " +
-          floorIdentifier,
-        "bot"
-      );
+      let message = "No data found for the identifiers: ";
+      let identifiers = [];
+
+      if (buildingIdentifier) {
+        identifiers.push("Building - " + buildingIdentifier);
+      }
+
+      if (verticalIdentifier) {
+        identifiers.push("Vertical - " + verticalIdentifier);
+      }
+
+      if (floorIdentifier) {
+        identifiers.push("Floor - " + floorIdentifier);
+      }
+
+      if (nodeIdentifier) {
+        identifiers.push("Node - " + nodeIdentifier);
+      }
+
+      message += identifiers.join(", ");
+
+      this.addMessage(message, "bot");
       return false;
     }
 
@@ -290,6 +362,28 @@ class ChatBotComponent extends LitElement {
 
   async sendMessage() {
     const userInputTrimmed = this.userInput.trim();
+    // If string input is expected, send the input as is
+    if (this.stringInput) {
+      this.stringInput = false;
+      // Add user's message to the chat
+      this.addMessage(userInputTrimmed, "user");
+      // Send a place holder message saying the data for your node is being fetched
+      let continueConversation = await this.fetchDataAndAskContinue(
+        false, // No building identifier
+        false, // No vertical identifier
+        false, // No floor identifier
+        userInputTrimmed
+      );
+      if (!continueConversation) {
+        // Send message to end the conversation
+        this.addMessage(
+          "Thank you for using the chatbot. Have a great day!",
+          "bot"
+        );
+      }
+      this.resetInputAndPopulateMessages();
+      return;
+    }
     const selectedOption = this.currentOptions.find(
       (option) => option.text === userInputTrimmed
     );
@@ -319,6 +413,10 @@ class ChatBotComponent extends LitElement {
         } else if (lastBotMessage.includes("Please select a vertical")) {
           this.verticalIdentifier = selectedOption.identifier;
         }
+      }
+
+      if (selectedOption.textInput) {
+        this.stringInput = true;
       }
 
       console.log(
@@ -443,9 +541,14 @@ class ChatBotComponent extends LitElement {
 
   render() {
     return html`
-<div class="chat-option" @click="${this.togglePopup}">
-    <img src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png" alt="Chat Icon" width="40" height="40">
-</div>
+      <div class="chat-option" @click="${this.togglePopup}">
+        <img
+          src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
+          alt="Chat Icon"
+          width="40"
+          height="40"
+        />
+      </div>
       <div id="chat-pop" class="chatbot-popup">
         <div class="chat-header">
           <img
