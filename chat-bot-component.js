@@ -83,6 +83,11 @@ class DataProcessor {
             results[key] = Math.min(...numericValues);
             break;
         }
+        // check if rawValues has any non-numeric values
+        if(rawValues[0] !== values[0]) {
+          results[key] = results[key] + " " + rawValues[0].split(" ")[1];
+        }
+          
       });
 
     return results;
