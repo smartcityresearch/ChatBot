@@ -65,9 +65,9 @@ const conversationTree = {
       message:
         "Which value do you need? Please select an option by entering the corresponding number:\n1. Average value\n2. Maximum value\n3. Minimum value",
       options: [
-        { text: "1", next: "CommonNode", terminate: true },
-        { text: "2", next: "CommonNode", terminate: true },
-        { text: "3", next: "CommonNode", terminate: true },
+        { text: "1", next: "CommonNode", terminate: true, accumulator: "avg" },
+        { text: "2", next: "CommonNode", terminate: true, accumulator: "max" },
+        { text: "3", next: "CommonNode", terminate: true, accumulator: "min" },
         // ... other value options ...
       ],
     },

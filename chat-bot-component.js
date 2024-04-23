@@ -5,6 +5,78 @@ import {
 } from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
 import { conversationTree } from "./conversation.js";
 
+class DataProcessor {
+  constructor(data) {
+    this.data = data;
+  }
+
+  // Parse the first numeric part of a string if applicable
+  parseValue(value) {
+    const matches = value.match(/^[\d\.]+/);
+    if (matches) {
+      return parseFloat(matches[0]);
+    }
+    return value;
+  }
+
+  // Determines the mode (most frequently occurring value) in an array
+  findMode(values) {
+    const frequency = {};
+    let maxFreq = 0;
+    let mode = values[0];
+    for (const value of values) {
+      frequency[value] = (frequency[value] || 0) + 1;
+      if (frequency[value] > maxFreq) {
+        maxFreq = frequency[value];
+        mode = value;
+      }
+    }
+    return mode;
+  }
+
+  // Calculates average for an array of numbers
+  calculateAverage(values) {
+    const sum = values.reduce((acc, val) => acc + val, 0);
+    const average = sum / values.length;
+    return isNaN(average) ? undefined : average;
+  }
+
+  // General aggregation function
+  aggregateData(method) {
+    const ignoreKeys = ['node_id', 'name', 'latitude', 'longitude', 'xcor', 'ycor', 'type'];
+    const results = {};
+
+    Object.keys(this.data[0])
+      .filter(key => !ignoreKeys.includes(key))
+      .forEach(key => {
+        const rawValues = this.data.map(node => node[key]);
+        const values = rawValues.map(this.parseValue);
+
+        // Split data types
+        const numericValues = values.filter(value => typeof value === 'number');
+        const nonNumericValues = values.filter(value => typeof value !== 'number');
+
+        if (numericValues.length === 0) {
+          results[key] = this.findMode(nonNumericValues);
+          return;
+        } 
+        switch (method) {
+          case 'avg':
+            results[key] = this.calculateAverage(numericValues);
+            break;
+          case 'max':
+            results[key] = Math.max(...numericValues);
+            break;
+          case 'min':
+            results[key] = Math.min(...numericValues);
+            break;
+        }
+      });
+
+    return results;
+  }
+}
+
 class ChatBotComponent extends LitElement {
   static styles = css`
     .chat-option {
@@ -173,6 +245,7 @@ class ChatBotComponent extends LitElement {
     this.buildingIdentifier = ""; // To store building identifier
     this.verticalIdentifier = ""; // To store vertical identifier
     this.floorIdentifier = ""; // To store floor identifier
+    this.acc = false; // To store accumulator
     this.stringInput = false;
   }
 
@@ -225,6 +298,7 @@ class ChatBotComponent extends LitElement {
     buildingIdentifier,
     verticalIdentifier,
     floorIdentifier,
+    accumulator = false,
     nodeIdentifier = false
   ) {
     // fetch data from url
@@ -334,12 +408,29 @@ class ChatBotComponent extends LitElement {
       return false;
     }
 
+    if (accumulator) {
+      // Log all the data
+      const processor = new DataProcessor(filteredNodes);
+      const aggregatedData = processor.aggregateData(accumulator);
+      filteredNodes = [aggregatedData];
+      // Except for latitude, longitude, node_id, name, type, xcor and ycor Calculate for all the other keys
+      // Some are numbers and some are strings like "good", "bad", "average" and others are strings like "43 something"
+      // For numbers, calculate the average, for strings like "good", "bad", "average" calculate the most common value and for strings like "43 something" split the string and calculate average of the numbers and then reattach the string
+    }
+
     // if more than 1 node is found return the first node
     console.log(filteredNodes);
     if (filteredNodes.length >= 1) {
       let responseMessage = "";
+      // if accumulator is true, then the data is aggregated
+      if (accumulator) {
+        responseMessage += "Aggregated data with \n";
+        responseMessage += "Accumulator: " + accumulator + "\n";
+      } else {
+        responseMessage += "Data for the identifiers: \n";
+      }
       filteredNodes.forEach((node, index) => {
-        responseMessage += "Node " + (index + 1) + ":\n";
+        if (!accumulator) responseMessage += `${node['node_id']}:\n`;
         for (const [key, value] of Object.entries(node)) {
           responseMessage += key + ": " + value + "\n";
         }
@@ -372,6 +463,7 @@ class ChatBotComponent extends LitElement {
         false, // No building identifier
         false, // No vertical identifier
         false, // No floor identifier
+        false, // No accumulator
         userInputTrimmed
       );
       if (!continueConversation) {
@@ -415,6 +507,11 @@ class ChatBotComponent extends LitElement {
         }
       }
 
+      // Check if the conversation has an accumulator
+      if (selectedOption.accumulator) {
+        this.acc = selectedOption.accumulator;
+      }
+
       if (selectedOption.textInput) {
         this.stringInput = true;
       }
@@ -432,7 +529,8 @@ class ChatBotComponent extends LitElement {
         let continueConversation = await this.fetchDataAndAskContinue(
           this.buildingIdentifier,
           this.verticalIdentifier,
-          this.floorIdentifier
+          this.floorIdentifier,
+          this.acc,
         );
         if (!continueConversation) {
           // Send message to end the conversation
