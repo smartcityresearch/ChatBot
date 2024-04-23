@@ -452,21 +452,34 @@ class ChatBotComponent extends LitElement {
         responseMessage += "Data for the identifiers: \n";
       }
 
-      // Create a markdown table for better readability
-      // Add title and identifier names before the table
-      let mkdwnTable = "# Data For the Identifiers:\n";
-      if (buildingIdentifier) {
-        mkdwnTable += "Building: " + buildingIdentifier + "\n";
+      // Get the first node
+      let node = filteredNodes[0];
+
+      // Initialize the response message
+      responseMessage += `${node["node_id"]}:\n`;
+
+      // Iterate over the properties of the node
+      for (const [key, value] of Object.entries(node)) {
+        responseMessage += key + ": " + value + "\n";
       }
-      if (verticalIdentifier) {
-        mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
-      }
-      if (floorIdentifier) {
-        mkdwnTable += "Floor: " + floorIdentifier + "\n";
-      }
-      mkdwnTable += "\n";
+
+      this.addMessage(responseMessage, "bot");
 
       if (filteredNodes.length > 1) {
+        // Create a markdown table for better readability
+        // Add title and identifier names before the table
+        let mkdwnTable = "# Data For the Identifiers:\n";
+        if (buildingIdentifier) {
+          mkdwnTable += "Building: " + buildingIdentifier + "\n";
+        }
+        if (verticalIdentifier) {
+          mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
+        }
+        if (floorIdentifier) {
+          mkdwnTable += "Floor: " + floorIdentifier + "\n";
+        }
+        mkdwnTable += "\n";
+
         mkdwnTable += "|";
         for (const key of Object.keys(filteredNodes[0])) {
           mkdwnTable += key + "|";
@@ -482,40 +495,27 @@ class ChatBotComponent extends LitElement {
           }
           mkdwnTable += "\n";
         }
-      }
 
-      // Post to stagbin
-      const response = await fetch("https://api.stagb.in/dev/content", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          data: mkdwnTable,
-        }),
-      });
-      console.log(response);
-      const responseJson = await response.json();
-      console.log(responseJson);
-
-      // Get the first node
-      let node = filteredNodes[0];
-
-      // Initialize the response message
-      responseMessage += `${node["node_id"]}:\n`;
-
-      // Iterate over the properties of the node
-      for (const [key, value] of Object.entries(node)) {
-        responseMessage += key + ": " + value + "\n";
-      }
-
-      this.addMessage(responseMessage, "bot");
+        // Post to stagbin
+        const response = await fetch("https://api.stagb.in/dev/content", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            data: mkdwnTable,
+          }),
+        });
+        console.log(response);
+        const responseJson = await response.json();
+        console.log(responseJson);
 
       // Add table link to the chat
       this.addMessage(
         `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
         "bot"
       );
+    }
       return false;
     }
 
