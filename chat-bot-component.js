@@ -718,7 +718,7 @@ class ChatBotComponent extends LitElement {
     this.acc = false;
     this.stringInput = false;
     this.recommendedQuestions = [];
-    this.conversationOptions = []; 
+    this.conversationOptions = [];
     this.showRecommendedQuestions = false;// New property for conversation options
   }
   scrollToBottom() {
@@ -728,10 +728,10 @@ class ChatBotComponent extends LitElement {
     }
   }
   // Add this method to toggle recommended questions visibility
-toggleRecommendedQuestions() {
-  this.showRecommendedQuestions = !this.showRecommendedQuestions;
-  this.requestUpdate();
-}
+  toggleRecommendedQuestions() {
+    this.showRecommendedQuestions = !this.showRecommendedQuestions;
+    this.requestUpdate();
+  }
 
 
   togglePopup() {
@@ -1250,63 +1250,63 @@ toggleRecommendedQuestions() {
     this.populateMessages(); // Update displayed messages
   }
 
-// Updated populateMessages method to implement the new styling
-populateMessages() {
-  const messageContainer = this.shadowRoot.getElementById("message-container");
-  messageContainer.innerHTML = "";
+  // Updated populateMessages method to implement the new styling
+  populateMessages() {
+    const messageContainer = this.shadowRoot.getElementById("message-container");
+    messageContainer.innerHTML = "";
 
-  this.messages.forEach((msg) => {
-    const messageWrapper = document.createElement("div");
-    messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
+    this.messages.forEach((msg) => {
+      const messageWrapper = document.createElement("div");
+      messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
 
-    // Only add avatar for bot messages
-    if (msg.sender === "bot") {
-      const avatarContainer = document.createElement("div");
-      avatarContainer.className = "chat_user_avatar";
-      avatarContainer.innerHTML = '<img src="/assets/images/pre1.png" alt="Bot" class="md-user-image">';
-      messageWrapper.appendChild(avatarContainer);
+      // Only add avatar for bot messages
+      if (msg.sender === "bot") {
+        const avatarContainer = document.createElement("div");
+        avatarContainer.className = "chat_user_avatar";
+        avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
+        messageWrapper.appendChild(avatarContainer);
+      }
+
+      const messageBubble = document.createElement("div");
+      messageBubble.className = "chat_message";
+
+      const messageContent = document.createElement("p");
+      messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
+
+      messageBubble.appendChild(messageContent);
+      messageWrapper.appendChild(messageBubble);
+
+      messageContainer.appendChild(messageWrapper);
+    });
+
+    // Add option buttons after the last bot message if there are current options
+    if (this.currentOptions && this.currentOptions.length > 0 && this.messages.length > 0 &&
+      this.messages[this.messages.length - 1].sender === "bot" && !this.stringInput) {
+      const optionsContainer = document.createElement("div");
+      optionsContainer.className = "option-buttons";
+
+      this.currentOptions.forEach(option => {
+        const button = document.createElement("button");
+        button.className = "option-button";
+        button.textContent = option.text;
+        button.addEventListener("click", () => {
+          this.userInput = option.text;
+          this.sendMessage();
+        });
+        optionsContainer.appendChild(button);
+      });
+
+      messageContainer.appendChild(optionsContainer);
     }
 
-    const messageBubble = document.createElement("div");
-    messageBubble.className = "chat_message";
-
-    const messageContent = document.createElement("p");
-    messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
-
-    messageBubble.appendChild(messageContent);
-    messageWrapper.appendChild(messageBubble);
-
-    messageContainer.appendChild(messageWrapper);
-  });
-
-  // Add option buttons after the last bot message if there are current options
-  if (this.currentOptions && this.currentOptions.length > 0 && this.messages.length > 0 && 
-      this.messages[this.messages.length - 1].sender === "bot" && !this.stringInput) {
-    const optionsContainer = document.createElement("div");
-    optionsContainer.className = "option-buttons";
-    
-    this.currentOptions.forEach(option => {
-      const button = document.createElement("button");
-      button.className = "option-button";
-      button.textContent = option.text;
-      button.addEventListener("click", () => {
-        this.userInput = option.text;
-        this.sendMessage();
-      });
-      optionsContainer.appendChild(button);
-    });
-    
-    messageContainer.appendChild(optionsContainer);
+    // Auto-scroll to the bottom after populating messages
+    this.scrollToBottom();
   }
 
-  // Auto-scroll to the bottom after populating messages
-  this.scrollToBottom();
-}
-
-// Modify the render method to implement the toggle button and conditional display
-// Modify the render method to implement the requested changes
-render() {
-  return html`
+  // Modify the render method to implement the toggle button and conditional display
+  // Modify the render method to implement the requested changes
+  render() {
+    return html`
     <div class="chat-option" @click="${this.togglePopup}">
       <img
         src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
@@ -1377,7 +1377,7 @@ render() {
       </div>
     </div>
   `;
-}
+  }
 }
 
 customElements.define("chat-bot-component", ChatBotComponent);
