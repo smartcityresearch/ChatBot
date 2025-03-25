@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart City Query Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .query-box {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #query-input {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+        #send-button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #send-button:hover {
+            background-color: #2980b9;
+        }
+        .response-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 100px;
+        }
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            display: none;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart City Query Interface</h1>
+    
+    <div class="query-box">
+        <input type="text" id="query-input" placeholder="Ask about sensor data (e.g., 'What's the current temperature at node 001?')" />
+        <button id="send-button">Send</button>
+    </div>
+    
+    <div id="loading" class="loading">Processing your query...</div>
+    
+    <div class="response-container">
+        <h3>Response:</h3>
+        <div id="response-text"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const queryInput = document.getElementById('query-input');
+            const sendButton = document.getElementById('send-button');
+            const responseText = document.getElementById('response-text');
+            const loadingIndicator = document.getElementById('loading');
+            
+            // Get base URL - adjust this based on where your API is running
+            const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? `http://${window.location.hostname}:8001` 
+                : window.location.origin;
+            
+            // Function to send the query
+            function sendQuery() {
+                const query = queryInput.value.trim();
+                
+                if (!query) {
+                    responseText.innerHTML = '<p class="error">Please enter a query</p>';
+                    return;
+                }
+                
+                // Show loading indicator
+                loadingIndicator.style.display = 'block';
+                responseText.innerHTML = '';
+                
+                // Prepare request data
+                const requestData = {
+                    query: query
+                };
+                
+                // Send POST request to the API with the correct URL
+                fetch(`${baseUrl}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading indicator
+                    loadingIndicator.style.display = 'none';
+                    
+                    // Display the response
+                    if (data.response) {
+                        responseText.innerHTML = `<p>${data.response}</p>`;
+                    } else {
+                        responseText.innerHTML = '<p class="error">No response received</p>';
+                    }
+                })
+                .catch(error => {
+                    // Hide loading indicator
+                    loadingIndicator.style.display = 'none';
+                    
+                    // Display error message
+                    responseText.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                    console.error('Error:', error);
+                    
+                    // Provide fallback suggestion
+                    responseText.innerHTML += `
+                        <p>Try these troubleshooting steps:</p>
+                        <ul>
+                            <li>Check if the API server is running on port 8001</li>
+                            <li>Try using the GET endpoint by visiting: <a href="${baseUrl}/query?q=${encodeURIComponent(query)}" target="_blank">${baseUrl}/query?q=${encodeURIComponent(query)}</a></li>
+                            <li>Check browser console for additional error details</li>
+                        </ul>
+                    `;
+                });
+            }
+            
+            // Event listeners
+            sendButton.addEventListener('click', sendQuery);
+            
+            // Add event listener for Enter key
+            queryInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    sendQuery();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
