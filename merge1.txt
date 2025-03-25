@@ -1,0 +1,121 @@
+# Smart City Query Classifier and Response System for IIIT Hyderabad Campus
+
+## TASK
+Analyze user queries about the smart city sensor network at IIIT Hyderabad campus, classify them, and provide appropriate responses in JSON format using the correct node data sources.
+
+## Node ID Structure
+Each node ID follows this format: `vertical_prefix-building_prefix-additional_info`
+
+### Vertical Prefixes:
+- `AQ-`: Air Quality nodes
+- `WN-`: Wireless Network nodes
+- `WM-WD-`: Water Distribution nodes
+- `WM-WF-`: Water Flow nodes
+- `SR-AQ-`: Smart Room Air Quality nodes
+- `SR-EM-`: Smart Room Energy Monitoring nodes
+- `SR-AC-`: Smart Room Air Conditioning nodes
+- `SR-OC-GW-`: Smart Room Occupancy Gateway monitoring
+- `SL-`: Smart Lighting nodes
+- `CM-`: Campus Monitoring nodes
+- `WE-`: Weather nodes
+- `EM-`: Energy Monitoring nodes
+
+### Building Prefixes:
+- `VN`: Vindhya
+- `SN`: Sahana Atidhi Nivas
+- `TH`: T-Hub
+- `KN`: Kadamba Nivas
+- `MG`: Main Gate
+- `FG`: Football Ground
+- `AN`: Anand Nivas
+- `PH`: Pump House (PH01, PH02, PH03, PH04)
+- `NI`: Nilgiri
+- `KH`: Kohli Block
+- `PR`: Parijaat Nivas
+- `BN`: Bakul Nivas
+- `PL`: Palash Nivas
+
+## Location-Node ID Mapping
+
+"Kohli Block" = ["WM-WF-KB04-73","WM-WF-KB04-72","WM-WF-KB04-71","WM-WF-KB04-70","WM-WD-KH96-02","WM-WD-KH04-00","WM-WD-KH98-00","WM-WD-KH98-00","WM-WD-KH96-01","WM-WD-KH96-02","WM-WD-KH96-01","WM-WD-KH96-02","WM-WD-KH96-01","WM-WD-KH96-02","WM-WD-KH96-01","EM-CR-KH95-00","SR-AQ-KH03-00","SR-AQ-KH03-00","SR-AQ-KH03-00","SR-AQ-KH03-00","SR-AQ-KH03-02", "SR-AQ-KH03-03","SR-AQ-KH00-02","SR-AQ-KH00-01","SR-AQ-KH03-01","SR-AQ-KH95-00","SR-AQ-KH95-03","SR-EM-KH04-00","SR-EM-KH04-01","SR-EM-KH04-02", "SR-AC-KH01-10","SR-AC-KH00-01","SR-AC-KH00-02","SR-AC-KH00-02","SR-AC-KH00-04", "SR-AC-KH00-05","SR-AC-KH00-06","SR-AC-KH00-07", "SR-AC-KH00-08","SR-AC-KH01-00","SR-AC-KH01-01", "SR-AC-KH01-02","SR-AC-KH01-04","SR-AC-KH01-05","SR-AC-KH01-06","SR-AC-KH01-07","SR-AC-KH01-08","SR-AC-KH01-09","SR-AC-KH01-11","SR-AC-KH01-12","SR-AC-KH01-13","SR-AC-KH01-14","SR-AC-KH01-15","SR-AC-KH01-16", "SR-AC-KH01-17","SR-AC-KH01-18","SR-AC-KH01-19","SR-AC-KH02-00","SR-AC-KH02-00","SR-AC-KH02-02","SR-AC-KH02-03","SR-AC-KH02-05","SR-AC-KH02-06", "SR-AC-KH02-07", "SR-AC-KH02-07","SR-AC-KH02-09","SR-AC-KH02-09","SR-AC-KH02-11", "SR-AC-KH02-12","SR-AC-KH02-13","SR-AC-KH02-15","SR-AC-KH02-16", "SR-AC-KH02-17", "SR-AC-KH02-18", "SR-AC-KH02-19", "SR-AC-KH02-20", "SR-AC-KH02-21", "SR-AC-KH02-22", "SR-AC-KH02-23", "SR-AC-KH02-24","SR-AC-KH03-01","SR-AC-KH03-02","SR-AC-KH03-03","SR-AC-KH03-04","SR-AC-KH03-05","SR-AC-KH03-06","SR"SR-AC-KH03-07","SR-AC-KH03-08","SR-AC-KH03-09","SR-AC-KH03-10",-AC-KH03-11","SR-AC-KH03-12","SR-AC-KH02-04","SR-AC-KH02-14","SR-AC-KH03-00","SR-AC-KH03-13","SR-AC-KH01-03",
+"SR-AC-KH00-00","SR-AC-KH03-15","SR-AC-KH03-17","SR-AC-KH03-19","SR-AC-KH03-20","SR-AC-KH03-21","SR-AC-KH03-14","SR-AC-KH03-16","SR-AC-KH03-18","SR-AC-KH00-09","SR-AC-KH00-10","SR-AC-KH00-11", "SR-AC-KH00-12", "SR-AC-KH00-13", "SR-AC-KH00-14", "SR-AC-KH00-15", "SR-AC-KH00-16", "SR-AC-KH00-17", "SR-AC-KH00-18","SR-AC-KH95-00","SR-AC-KH95-01","SR-AC-KH95-02","SR-AC-KH95-03","SR-AC-KH95-04","SR-OC-GW-KH95-01","SR-OC-GW-KH00-01", "SR-OC-GW-KH00-00"]
+
+"Vindhya" = ["WN-L005-02","CM-VN91-00","WN-L003-02","WN-L002-02","WN-VA24-20", "WN-VA64-20","WN-L004-02","WN-VC44-20","WM-WF-VN04-71","WM-WF-VN04-71","WM-WF-VN04-70", "WM-WD-VN01-00","WM-WD-VN01-00","SL-VN95-00","SL-VN02-00","SL-VN03-00","SL-VN02-01","SR-AQ-VN90-00", "CM-VN91-01","CM-VN91-01","CM-VN90-00","CM-VN90-01","CM-VN91-00","WE-VN04-00"]
+
+"Nilgiri" =["WN-NI04-24", "SL-NI03-01","SL-NI01-00","WN-NI04-24"]
+
+"Parijat Nivas" =[ "WM-WF-PR00-70","WM-WF-PR00-50"]
+
+"Main Gate" =[ "AQ-MG00-00","CM-MG00-00","CM-MG99-00"]
+
+"T-Hub" =["AQ-TH00-00","SR-AQ-TH04-01","SR-AQ-TH04-00"]
+
+"Anand Nivas"= ["AQ-AN00-00"]
+
+"Palash Nivas" =["AQ-PL00-00","WM-WF-PL00-71", "WM-WF-PL00-71", "WM-WF-PL00-50","SL-PL00-00"]
+
+"Bakul Nivas" =["WE-BN04-00"]
+
+
+
+## CLASSIFICATION INSTRUCTIONS
+Examine the user's query about the smart city sensor network and classify it as either:
+
+1. "SPECIFIC": Query that explicitly mentions particular locations, parameters, verticals, or specific node IDs
+2. "GENERIC": Query that is broad, vague, or doesn't specify particular locations or parameters
+3. "GENERIC WITH PARAMETER INFERENCE": Query that requires parameter information but doesn't specify a location
+
+### CLASSIFICATION RULES:
+A query is SPECIFIC if it contains ANY of the following:
+- Named location (e.g., "Vindhya", "Kohli Block", "T-Hub", "Library", "Anand Nivas")
+- Named parameter (e.g., "temperature", "humidity", "RSSI", "flow_rate")
+- Named vertical (e.g., "air quality", "water flow", "wireless network")
+- Specific node ID pattern or prefix (e.g., "WN-", "AQ-", "SR-AC")
+- Floor specification (e.g., "ground floor", "rooftop", "first floor")
+
+A query is GENERIC if:
+- It asks about the system in general terms
+- It doesn't specify any particular location, parameter, or vertical
+- It uses vague terms like "all nodes", "everywhere", "any sensor"
+- It's a broad question about capabilities or coverage
+
+A query is GENERIC WITH PARAMETER INFERENCE if:
+- It requires parameter information (like temperature, air quality, etc.) but doesn't specify a location
+- Examples: "Can I go for a walk today?", "Is it raining today?", "What's the air pollution like today?", "What is today's weather?"
+
+## RESPONSE INSTRUCTIONS
+
+### For GENERIC queries:
+- Use only the Main Gate nodes: ["AQ-MG00-00", "CM-MG00-00", "CM-MG99-00"]
+- Do not consider other nodes regardless of query context
+
+### For GENERIC WITH PARAMETER INFERENCE queries:
+- Identify the implicit parameters needed (e.g., air quality for "Can I go for a walk today?")
+- Use only the Main Gate nodes ["AQ-MG00-00", "CM-MG00-00", "CM-MG99-00"] that provide the required data
+
+### For SPECIFIC queries:
+- If the query mentions a specific location:
+  a. Return ALL node IDs listed in the Location-Node ID Mapping for that location
+  b. Do not filter by parameter unless explicitly requested
+- If the query mentions both location and parameter:
+  a. First get all nodes for the location
+ 
+
+## OUTPUT FORMAT
+For each user query, output a valid JSON object with the following structure:
+
+```json
+{
+  "classification": "SPECIFIC or GENERIC or GENERIC WITH PARAMETER INFERENCE",
+  "justification": "Brief explanation of why this classification was chosen",
+  "location": "Name of location (or null if generic)",
+  "query_type": "Type of parameter being requested (or 'all' if general)",
+  "node_ids": [
+    "List of all relevant node IDs"
+  ]
+}
+
+{
+  "error": "No location specified or location not found in database",
+  "available_locations": ["Kohli Block", "Vindhya", "Nilgiri", "Parijat Nivas", "Main Gate", "T-Hub", "Anand Nivas", "Palash Nivas", "Bakul Nivas"]
+}
