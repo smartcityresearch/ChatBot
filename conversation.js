@@ -113,20 +113,20 @@ const conversationTree = {
       message: "Processing your question...",
       terminate: true,
       apiCall: true,
-
+    
       async process(inputText) {
         try {
-          const response = await fetch("http://10.2.16.188:8000/api/chat", {
+          const response = await fetch("http://localhost:8001/query", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: inputText }),
+            body: JSON.stringify({ query: inputText }),
           });
-
+    
           if (!response.ok) {
             console.error("Server Error:", response.statusText);
             throw new Error(`HTTP error! Status: ${response.status}`);
           }
-
+    
           const data = await response.json();
           return data.response || "No response from backend.";
         } catch (error) {

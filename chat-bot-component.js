@@ -1263,7 +1263,7 @@ class ChatBotComponent extends LitElement {
       if (msg.sender === "bot") {
         const avatarContainer = document.createElement("div");
         avatarContainer.className = "chat_user_avatar";
-        avatarContainer.innerHTML = '<img src="/assets/images/pre1.png" alt="Bot" class="md-user-image">';
+        avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
         messageWrapper.appendChild(avatarContainer);
       }
 

@@ -643,27 +643,26 @@ class ChatBotComponent extends LitElement {
     right: 0;
   }
   .option-buttons {
+     background-color: white;
+    color: black;
+    border: 2px solid #0074D9;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    min-width: 45px; /* Ensure buttons don't shrink */
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 10px 0;
+    align-items: center;
     justify-content: center;
-    width:
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Prevent button from shrinking */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     
   }
   
-  .option-button {
-    background-color: #f1f2f3;
-    color: #2f2c2c;
-    border: 2px solid #007bff;
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    white-space: nowrap;
-    margin: 5px;
-  }
+
   .conversation-options {
    display: flex;
   flex-direction: row; /* Changed from column to row */
@@ -675,9 +674,15 @@ class ChatBotComponent extends LitElement {
 }
   
   .option-button:hover {
-    background-color: #0056b3;
+    background-color: #0056a1;
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
+        .option-button:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      }
 
 
   .chat-title-container {
@@ -766,6 +771,43 @@ class ChatBotComponent extends LitElement {
   text-align: center;
 }
 
+      .dynamic-option-buttons {
+         display: flex;
+        gap: 12px;
+        padding: 5 5px;
+        /* Minimum width to ensure all buttons are visible */
+        min-width: max-content;
+      }
+      
+      .option-button {
+       background-color: white;
+    color: black;
+    border: 2px solid #0074D9;
+    border-radius: 50%;
+    width: 33px;
+    height: 33px;
+    min-width: 33px; /* Ensure buttons don't shrink */
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Prevent button from shrinking */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      
+      .option-button:hover {
+        background-color: #0056a1;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+    .option-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
 
       #message-container {
         display: flex;
@@ -1601,11 +1643,19 @@ class ChatBotComponent extends LitElement {
           console.error("Server returned non-JSON response");
           return "Server returned an unexpected response format. Please try again later.";
         }
+        return data.response || "Sorry, I couldn't process your question.";
       } else {
         console.error("Server returned non-JSON response");
         return "Server returned an unexpected response format. Please try again later.";
       }
 
+      if (!response.ok) {
+        console.error("Server Error:", response.statusText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.response || "Sorry, I couldn't process your question.";
     } catch (error) {
       console.error("Error communicating with backend:", error);
       return "Sorry, I couldn't connect to the backend service. Please try again later.";
@@ -1630,11 +1680,11 @@ class ChatBotComponent extends LitElement {
   populateMessages() {
     const messageContainer = this.shadowRoot.getElementById("message-container");
     messageContainer.innerHTML = "";
-  
+
     this.messages.forEach((msg) => {
       const messageWrapper = document.createElement("div");
       messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
-  
+
       // Only add avatar for bot messages
       if (msg.sender === "bot") {
         const avatarContainer = document.createElement("div");
@@ -1642,39 +1692,44 @@ class ChatBotComponent extends LitElement {
         avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
         messageWrapper.appendChild(avatarContainer);
       }
-  
+
       const messageBubble = document.createElement("div");
       messageBubble.className = "chat_message";
-  
-      const messageContent = document.createElement("p");
+
+      const messageContent = document.createElement("div");
       messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
-  
+
       messageBubble.appendChild(messageContent);
       messageWrapper.appendChild(messageBubble);
-  
+
       messageContainer.appendChild(messageWrapper);
+
+      // Check if this is a bot message with options
+      if (msg.sender === "bot" && this.currentOptions.length > 0) {
+        const lastBotMessageText = msg.text;
+        if (!lastBotMessageText.includes('Please enter your question:') && !lastBotMessageText.includes('Thank you for using the chatbot. Have a great day!')) {
+          const buttonsContainer = document.createElement("div");
+          buttonsContainer.className = "dynamic-option-buttons";
+
+          // Add each option as a button
+          this.currentOptions.forEach(option => {
+            const optionButton = document.createElement("button");
+            optionButton.className = "option-button";
+            optionButton.textContent = option.text;
+
+            // Handle click event
+            optionButton.addEventListener("click", () => {
+              this.handleOptionSelection(option.text);
+            });
+
+            buttonsContainer.appendChild(optionButton);
+          });
+
+          messageContainer.appendChild(buttonsContainer);
+        }
+      }
     });
-  
-    // Add option buttons after the last bot message if there are current options
-    if (this.currentOptions && this.currentOptions.length > 0 && this.messages.length > 0 && 
-        this.messages[this.messages.length - 1].sender === "bot" && !this.stringInput) {
-      const optionsContainer = document.createElement("div");
-      optionsContainer.className = "option-buttons";
-      
-      this.currentOptions.forEach(option => {
-        const button = document.createElement("button");
-        button.className = "option-button";
-        button.textContent = option.text;
-        button.addEventListener("click", () => {
-          this.userInput = option.text;
-          this.sendMessage();
-        });
-        optionsContainer.appendChild(button);
-      });
-      
-      messageContainer.appendChild(optionsContainer);
-    }
-  
+
     // Auto-scroll to the bottom after populating messages
     this.scrollToBottom();
   }
