@@ -1103,916 +1103,916 @@ flex-direction: row;
 }
 `;
 
-    constructor() {
-      super();
-      this.popupActive = false;
-      this.currentMessageIndex = 0;
-      this.lastCorrectMessageIndex = 0;
-      this.messages = [{ text: conversationTree.message, sender: "bot" }];
-      this.currentOptions = conversationTree.options;
-      this.userInput = "";
-      this.buildingIdentifier = "";
-      this.verticalIdentifier = "";
-      this.floorIdentifier = "";
-      this.acc = false;
-      this.stringInput = false;
-      this.recommendedQuestions = [];
-      this.conversationOptions = [];
-      this.showRecommendedQuestions = false;// New property for conversation options
-      this.editingMessageIndex = -1;
+  constructor() {
+    super();
+    this.popupActive = false;
+    this.currentMessageIndex = 0;
+    this.lastCorrectMessageIndex = 0;
+    this.messages = [{ text: conversationTree.message, sender: "bot" }];
+    this.currentOptions = conversationTree.options;
+    this.userInput = "";
+    this.buildingIdentifier = "";
+    this.verticalIdentifier = "";
+    this.floorIdentifier = "";
+    this.acc = false;
+    this.stringInput = false;
+    this.recommendedQuestions = [];
+    this.conversationOptions = [];
+    this.showRecommendedQuestions = false;// New property for conversation options
+    this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.currentChart = null;
-    }
-    startEditMessage(index) {
-      // Only allow editing user messages
-      if (this.messages[index].sender === 'user') {
-        this.editingMessageIndex = index;
-        this.editedMessage = this.messages[index].text;
-        this.requestUpdate();
+  }
+  startEditMessage(index) {
+    // Only allow editing user messages
+    if (this.messages[index].sender === 'user') {
+      this.editingMessageIndex = index;
+      this.editedMessage = this.messages[index].text;
+      this.requestUpdate();
 
-        setTimeout(() => {
-          const editInput = this.shadowRoot.querySelector('.edit-message-input input');
-          if (editInput) {
-            editInput.focus();
-          }
-        }, 50);
+      setTimeout(() => {
+        const editInput = this.shadowRoot.querySelector('.edit-message-input input');
+        if (editInput) {
+          editInput.focus();
+        }
+      }, 50);
+    }
+  }
+
+  async saveEditedMessage() {
+    if (this.editingMessageIndex !== -1 && this.editedMessage.trim()) {
+      // Store original message
+      const originalMessage = this.messages[this.editingMessageIndex].text;
+
+      // Update the user message with edited content
+      this.messages[this.editingMessageIndex].text = this.editedMessage.trim();
+
+      // Find the next message index
+      const responseIndex = this.editingMessageIndex + 1;
+
+      // Remove all messages after the edited message
+      // This will remove the previous response and any subsequent messages
+      if (responseIndex < this.messages.length) {
+        this.messages.splice(responseIndex);
+      }
+
+      // Add a new bot response message with loading indicator
+      this.messages.push({
+        sender: 'bot',
+        text: '●'
+      });
+
+      // Update the UI to show changes
+      this.populateMessages();
+
+      // Animated dots for loading
+      let dotCount = 0;
+      const loadingInterval = setInterval(() => {
+        dotCount = (dotCount % 3) + 1;
+        const dots = '●'.repeat(dotCount);
+
+        if (this.messages.length > responseIndex) {
+          this.messages[this.messages.length - 1].text = dots;
+          this.populateMessages();
+        }
+      }, 500);
+
+      try {
+        // Send the edited message to get a new response
+        const response = await this.sendMessageToBackend(this.editedMessage.trim());
+
+        // Clear the loading indicator
+        clearInterval(loadingInterval);
+
+        // Check if the new response should have visualization components
+        const temporalDataKeywords = [
+          'past', 'last', 'history', 'historical', 'trend', 'over time',
+          'yesterday', 'week', 'month', 'year', 'hour', 'day'
+        ];
+
+        const sensorParameterKeywords = [
+          'temperature', 'humidity', 'co2', 'carbon dioxide', 'co', 'carbon monoxide',
+          'pm2.5', 'particulate matter', 'pm10', 'gas', 'tvoc', 'voc', 'air quality',
+          'ph', 'turbidity', 'tds', 'conductivity', 'water flow', 'water level',
+          'voltage', 'current', 'power', 'energy', 'pressure', 'noise'
+        ];
+
+        const isTemporalDataQuery = temporalDataKeywords.some(keyword =>
+          this.editedMessage.toLowerCase().includes(keyword)
+        );
+
+        const isSensorParameterQuery = sensorParameterKeywords.some(keyword =>
+          this.editedMessage.toLowerCase().includes(keyword)
+        );
+
+        // Update the bot response with the new response
+        // If the query qualifies for visualization, add the icon
+        if (isTemporalDataQuery && isSensorParameterQuery) {
+          const iconId = `visualizeIcon_${Date.now()}`;
+          const queryToUse = this.editedMessage.trim(); // Store the actual query to use
+
+          this.messages[this.messages.length - 1].text = `${response}\n\n<div id="${iconId}" class="visualization-icon" data-query="${encodeURIComponent(queryToUse)}">
+                <img src="/static/images/bar1.png" alt="Visualize" />
+              </div>`;
+
+          // Add event listener for visualization icon after the message is rendered
+          setTimeout(() => {
+            const icon = this.shadowRoot.getElementById(iconId);
+            if (icon) {
+              // Remove any existing listeners by cloning and replacing the node
+              const newIcon = icon.cloneNode(true);
+              icon.parentNode.replaceChild(newIcon, icon);
+
+              // Add a fresh event listener with the correct query
+              newIcon.addEventListener("click", () => {
+                console.log("Visualization icon clicked for query:", queryToUse);
+                const encodedQuery = encodeURIComponent(queryToUse);
+                this.openVisualizationModal(encodedQuery);
+              });
+            }
+          }, 100);
+        } else {
+          // For other responses, just update the text
+          this.messages[this.messages.length - 1].text = response;
+        }
+      } catch (error) {
+        clearInterval(loadingInterval);
+
+        // Show error message if request fails
+        this.messages[this.messages.length - 1].text = "Sorry, I couldn't process your edited question. Please try again.";
+        console.error("Error processing edited message:", error);
+      }
+
+      // Reset editing state
+      this.editingMessageIndex = -1;
+      this.editedMessage = '';
+
+      // Update UI
+      this.populateMessages();
+    }
+  }
+
+  cancelEditMessage() {
+    this.editingMessageIndex = -1;
+    this.editedMessage = '';
+    this.requestUpdate();
+  }
+
+  scrollToBottom() {
+    const messageContainer = this.shadowRoot.getElementById("message-container");
+    if (messageContainer) {
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+  }
+  // Add this method to toggle recommended questions visibility
+  toggleRecommendedQuestions() {
+    this.showRecommendedQuestions = !this.showRecommendedQuestions;
+    this.requestUpdate();
+  }
+
+
+  togglePopup() {
+    this.popupActive = !this.popupActive;
+    let popup = this.shadowRoot.getElementById("chat-pop");
+    if (this.popupActive) {
+      // this.currentMessageIndex = 0;
+      this.currentOptions = conversationTree.options;
+      this.userInput = "";
+      popup.classList.add("active");
+      this.populateMessages();
+    } else {
+      popup.classList.remove("active");
+    }
+  }
+
+  handleUserInput(e) {
+    this.userInput = e.target.value;
+  }
+
+  getLevenshteinDistance(a, b) {
+    const distanceMatrix = Array(a.length + 1)
+      .fill(null)
+      .map(() => Array(b.length + 1).fill(null));
+
+    for (let i = 0; i <= a.length; i++) {
+      distanceMatrix[i][0] = i;
+    }
+
+    for (let j = 0; j <= b.length; j++) {
+      distanceMatrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+        distanceMatrix[i][j] = Math.min(
+          distanceMatrix[i - 1][j] + 1,
+          distanceMatrix[i][j - 1] + 1,
+          distanceMatrix[i - 1][j - 1] + indicator
+        );
       }
     }
 
-    async saveEditedMessage() {
-      if (this.editingMessageIndex !== -1 && this.editedMessage.trim()) {
-        // Store original message
-        const originalMessage = this.messages[this.editingMessageIndex].text;
-        
-        // Update the user message with edited content
-        this.messages[this.editingMessageIndex].text = this.editedMessage.trim();
-        
-        // Find the next message index
-        const responseIndex = this.editingMessageIndex + 1;
-        
-        // Remove all messages after the edited message
-        // This will remove the previous response and any subsequent messages
-        if (responseIndex < this.messages.length) {
-          this.messages.splice(responseIndex);
+    return distanceMatrix[a.length][b.length];
+  }
+
+  async fetchDataAndAskContinue(
+    buildingIdentifier,
+    verticalIdentifier,
+    floorIdentifier,
+    accumulator = false,
+    nodeIdentifier = false
+  ) {
+    // fetch data from url
+    const latest_data_url = new URL(
+      "https://smartcitylivinglab.iiit.ac.in/verticals/all/latest"
+    );
+    const options = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    this.resetInputAndPopulateMessages();
+
+    // Fetch data from the API
+    let response = await fetch(latest_data_url, options);
+
+    let data = await response.json();
+
+    const data_dict = Object.values(data)
+      .flat()
+      .reduce((acc, element) => {
+        acc[element.node_id] = element;
+        return acc;
+      }, {});
+
+    let filteredNodes = Object.values(data_dict);
+    // Check if vertical
+    if (verticalIdentifier) {
+      // get all with node_id starting with verticalIdentifier or if first 4 letters have verticalIdentifier
+      filteredNodes = Object.values(data_dict).filter(
+        (node) =>
+          node.node_id.startsWith(verticalIdentifier) ||
+          node.node_id.slice(0, 4).includes(verticalIdentifier)
+      );
+    }
+    // Check if building
+    if (buildingIdentifier) {
+      // getall nodes in filtered nodes which have buildingIdentifier in their node_id
+      filteredNodes = filteredNodes.filter((node) =>
+        node.node_id.includes(buildingIdentifier)
+      );
+    }
+    // Check if floor
+    if (floorIdentifier) {
+      // getall nodes in filtered nodes which have floorIdentifier in their node_id
+      filteredNodes = filteredNodes.filter((node) =>
+        node.node_id.includes(floorIdentifier)
+      );
+    }
+
+    // Check nodeIdentifier
+    if (nodeIdentifier) {
+      // get node with node_id equal to nodeIdentifier
+      filteredNodes = filteredNodes.filter(
+        (node) => node.node_id === nodeIdentifier
+      );
+      // If no node found, try to find the closest match using Levenshtein distance
+      if (filteredNodes.length === 0) {
+        let closestMatch = "";
+        let minDistance = Number.MAX_SAFE_INTEGER;
+        for (const node of Object.values(data_dict)) {
+          const distance = this.getLevenshteinDistance(
+            node.node_id,
+            nodeIdentifier
+          );
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestMatch = node.node_id;
+          }
         }
-        
-        // Add a new bot response message with loading indicator
-        this.messages.push({
-          sender: 'bot',
-          text: '●'
+        console.log(
+          "Closest match: " + closestMatch + " with distance: " + minDistance
+        );
+        this.addMessage(
+          `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
+          "bot"
+        );
+
+        // Show the data for the closest match
+        filteredNodes = Object.values(data_dict).filter(
+          (node) => node.node_id === closestMatch
+        );
+      }
+    }
+
+    // if 0 nodes found, return No data found
+    if (filteredNodes.length === 0) {
+      let message = "No data found for the identifiers: ";
+      let identifiers = [];
+
+      if (buildingIdentifier) {
+        identifiers.push("Building - " + buildingIdentifier);
+      }
+
+      if (verticalIdentifier) {
+        identifiers.push("Vertical - " + verticalIdentifier);
+      }
+
+      if (floorIdentifier) {
+        identifiers.push("Floor - " + floorIdentifier);
+      }
+
+      if (nodeIdentifier) {
+        identifiers.push("Node - " + nodeIdentifier);
+      }
+
+      message += identifiers.join(", ");
+
+      this.addMessage(message, "bot");
+      return false;
+    }
+
+    if (accumulator) {
+      // Log all the data
+      const processor = new DataProcessor(filteredNodes);
+      const aggregatedData = processor.aggregateData(accumulator);
+      filteredNodes = [aggregatedData];
+      // Except for latitude, longitude, node_id, name, type, xcor and ycor Calculate for all the other keys
+      // Some are numbers and some are strings like "good", "bad", "average" and others are strings like "43 something"
+      // For numbers, calculate the average, for strings like "good", "bad", "average" calculate the most common value and for strings like "43 something" split the string and calculate average of the numbers and then reattach the string
+    }
+
+    // if more than 1 node is found return the first node
+    console.log(filteredNodes);
+    if (filteredNodes.length >= 1) {
+      let responseMessage = "";
+      // if accumulator is true, then the data is aggregated
+      if (accumulator) {
+        responseMessage += "Aggregated data with \n";
+        responseMessage += "Accumulator: " + accumulator + "\n";
+      } else {
+        responseMessage += "Data for the identifiers: \n";
+      }
+
+      // Get the first node
+      let node = filteredNodes[0];
+
+      // Initialize the response message
+      responseMessage += `${node["node_id"]}:\n`;
+
+      // Iterate over the properties of the node
+      for (const [key, value] of Object.entries(node)) {
+        responseMessage += key + ": " + value + "\n";
+      }
+
+      this.addMessage(responseMessage, "bot");
+
+      if (filteredNodes.length > 1) {
+        // Create a markdown table for better readability
+        // Add title and identifier names before the table
+        let mkdwnTable = "# Data For the Identifiers:\n";
+        if (buildingIdentifier) {
+          mkdwnTable += "Building: " + buildingIdentifier + "\n";
+        }
+        if (verticalIdentifier) {
+          mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
+        }
+        if (floorIdentifier) {
+          mkdwnTable += "Floor: " + floorIdentifier + "\n";
+        }
+        mkdwnTable += "\n";
+
+        mkdwnTable += "|";
+        for (const key of Object.keys(filteredNodes[0])) {
+          mkdwnTable += key + "|";
+        }
+        mkdwnTable += "\n|";
+        for (const key of Object.keys(filteredNodes[0])) {
+          mkdwnTable += "-|";
+        }
+        mkdwnTable += "\n";
+        for (const node of filteredNodes) {
+          for (const value of Object.values(node)) {
+            mkdwnTable += value + "|";
+          }
+          mkdwnTable += "\n";
+        }
+
+        // Post to stagbin
+        const response = await fetch("https://api.stagb.in/dev/content", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            data: mkdwnTable,
+          }),
         });
-        
-        // Update the UI to show changes
-        this.populateMessages();
-        
-        // Animated dots for loading
+        console.log(response);
+        const responseJson = await response.json();
+        console.log(responseJson);
+
+        // Add table link to the chat
+        this.addMessage(
+          `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
+          "bot"
+        );
+      }
+      return false;
+    }
+
+    // Fetch data based on identifiers and return true or false
+    return true;
+  }
+
+  handleKeyDown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevent form submission
+      this.sendMessage();
+    }
+  }
+
+  async sendMessage() {
+    const userInputTrimmed = this.userInput.trim();
+    if (!userInputTrimmed) {
+      return;
+    }
+    let loadingInterval;
+
+    if (this.stringInput) {
+      this.stringInput = false;
+      this.addMessage(userInputTrimmed, "user");
+
+      const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
+      if (lastBotMessage.includes("Please enter your question:")) {
         let dotCount = 0;
-        const loadingInterval = setInterval(() => {
+        loadingInterval = setInterval(() => {
           dotCount = (dotCount % 3) + 1;
           const dots = '●'.repeat(dotCount);
-          
-          if (this.messages.length > responseIndex) {
-            this.messages[this.messages.length - 1].text = dots;
-            this.populateMessages();
+
+          if (this.messages[this.messages.length - 1].sender === 'bot' &&
+            this.messages[this.messages.length - 1].text.startsWith('●')) {
+            this.messages.pop();
           }
+
+          this.addMessage(dots, "bot");
         }, 500);
-        
+
         try {
-          // Send the edited message to get a new response
-          const response = await this.sendMessageToBackend(this.editedMessage.trim());
-          
-          // Clear the loading indicator
-          clearInterval(loadingInterval);
-          
-          // Check if the new response should have visualization components
           const temporalDataKeywords = [
             'past', 'last', 'history', 'historical', 'trend', 'over time',
             'yesterday', 'week', 'month', 'year', 'hour', 'day'
           ];
-          
-          const sensorParameterKeywords = [
-            'temperature', 'humidity', 'co2', 'carbon dioxide', 'co', 'carbon monoxide',
-            'pm2.5', 'particulate matter', 'pm10', 'gas', 'tvoc', 'voc', 'air quality',
-            'ph', 'turbidity', 'tds', 'conductivity', 'water flow', 'water level',
-            'voltage', 'current', 'power', 'energy', 'pressure', 'noise'
-          ];
-          
-          const isTemporalDataQuery = temporalDataKeywords.some(keyword => 
-            this.editedMessage.toLowerCase().includes(keyword)
-          );
-          
-          const isSensorParameterQuery = sensorParameterKeywords.some(keyword => 
-            this.editedMessage.toLowerCase().includes(keyword)
-          );
-          
-          // Update the bot response with the new response
-          // If the query qualifies for visualization, add the icon
-          if (isTemporalDataQuery && isSensorParameterQuery) {
+
+          const tempHumidityKeywords = ['temperature', 'humidity'];
+          const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
+          const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
+
+          const response = await this.sendMessageToBackend(userInputTrimmed);
+
+          let responseData;
+          try {
+            responseData = typeof response === 'string' ? JSON.parse(response) : response;
+          } catch (parseError) {
+            responseData = {
+              response: response || "I received a response, but it couldn't be parsed.",
+              is_temporal: false
+            };
+          }
+
+          // ADDED: Explicit location extraction from input
+          const extractedLocation = this.extractLocation(userInputTrimmed);
+          console.log('Extracted Location:', extractedLocation);
+
+          if (loadingInterval) {
+            clearInterval(loadingInterval);
+          }
+
+          if (this.messages[this.messages.length - 1].text.startsWith('●')) {
+            this.messages.pop();
+          }
+
+          // MODIFIED: Use extracted location for validation
+          const isLocationValid =
+            extractedLocation &&
+            ['Kohli Block', 'Vindhya'].some(
+              location => extractedLocation.toLowerCase() === location.toLowerCase()
+            );
+
+
+          if (isTemporalDataQuery && isTempHumidityQuery) {
             const iconId = `visualizeIcon_${Date.now()}`;
-            const queryToUse = this.editedMessage.trim(); // Store the actual query to use
-            
-            this.messages[this.messages.length - 1].text = `${response}\n\n<div id="${iconId}" class="visualization-icon" data-query="${encodeURIComponent(queryToUse)}">
-                <img src="/static/images/bar1.png" alt="Visualize" />
-              </div>`;
-                
-            // Add event listener for visualization icon after the message is rendered
+
+            this.addMessage(`${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
+                    <img src="/static/images/bar1.png" alt="Visualize" />
+                  </div>`, "bot");
+
             setTimeout(() => {
               const icon = this.shadowRoot.getElementById(iconId);
               if (icon) {
-                // Remove any existing listeners by cloning and replacing the node
-                const newIcon = icon.cloneNode(true);
-                icon.parentNode.replaceChild(newIcon, icon);
-                
-                // Add a fresh event listener with the correct query
-                newIcon.addEventListener("click", () => {
-                  console.log("Visualization icon clicked for query:", queryToUse);
-                  const encodedQuery = encodeURIComponent(queryToUse);
+                icon.addEventListener("click", () => {
+                  console.log("Visualization icon clicked!");
+                  const encodedQuery = encodeURIComponent(userInputTrimmed);
                   this.openVisualizationModal(encodedQuery);
                 });
               }
             }, 100);
-          } else {
-            // For other responses, just update the text
-            this.messages[this.messages.length - 1].text = response;
-          }
-        } catch (error) {
-          clearInterval(loadingInterval);
-          
-          // Show error message if request fails
-          this.messages[this.messages.length - 1].text = "Sorry, I couldn't process your edited question. Please try again.";
-          console.error("Error processing edited message:", error);
-        }
-        
-        // Reset editing state
-        this.editingMessageIndex = -1;
-        this.editedMessage = '';
-        
-        // Update UI
-        this.populateMessages();
-      }
-    }
 
-    cancelEditMessage() {
-      this.editingMessageIndex = -1;
-      this.editedMessage = '';
-      this.requestUpdate();
-    }
-
-    scrollToBottom() {
-      const messageContainer = this.shadowRoot.getElementById("message-container");
-      if (messageContainer) {
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-      }
-    }
-    // Add this method to toggle recommended questions visibility
-    toggleRecommendedQuestions() {
-      this.showRecommendedQuestions = !this.showRecommendedQuestions;
-      this.requestUpdate();
-    }
-  
-  
-    togglePopup() {
-      this.popupActive = !this.popupActive;
-      let popup = this.shadowRoot.getElementById("chat-pop");
-      if (this.popupActive) {
-        // this.currentMessageIndex = 0;
-        this.currentOptions = conversationTree.options;
-        this.userInput = "";
-        popup.classList.add("active");
-        this.populateMessages();
-      } else {
-        popup.classList.remove("active");
-      }
-    }
-  
-    handleUserInput(e) {
-      this.userInput = e.target.value;
-    }
-  
-    getLevenshteinDistance(a, b) {
-      const distanceMatrix = Array(a.length + 1)
-        .fill(null)
-        .map(() => Array(b.length + 1).fill(null));
-  
-      for (let i = 0; i <= a.length; i++) {
-        distanceMatrix[i][0] = i;
-      }
-  
-      for (let j = 0; j <= b.length; j++) {
-        distanceMatrix[0][j] = j;
-      }
-  
-      for (let i = 1; i <= a.length; i++) {
-        for (let j = 1; j <= b.length; j++) {
-          const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-          distanceMatrix[i][j] = Math.min(
-            distanceMatrix[i - 1][j] + 1,
-            distanceMatrix[i][j - 1] + 1,
-            distanceMatrix[i - 1][j - 1] + indicator
-          );
-        }
-      }
-  
-      return distanceMatrix[a.length][b.length];
-    }
-  
-    async fetchDataAndAskContinue(
-      buildingIdentifier,
-      verticalIdentifier,
-      floorIdentifier,
-      accumulator = false,
-      nodeIdentifier = false
-    ) {
-      // fetch data from url
-      const latest_data_url = new URL(
-        "https://smartcitylivinglab.iiit.ac.in/verticals/all/latest"
-      );
-      const options = {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      };
-  
-      this.resetInputAndPopulateMessages();
-  
-      // Fetch data from the API
-      let response = await fetch(latest_data_url, options);
-  
-      let data = await response.json();
-  
-      const data_dict = Object.values(data)
-        .flat()
-        .reduce((acc, element) => {
-          acc[element.node_id] = element;
-          return acc;
-        }, {});
-  
-      let filteredNodes = Object.values(data_dict);
-      // Check if vertical
-      if (verticalIdentifier) {
-        // get all with node_id starting with verticalIdentifier or if first 4 letters have verticalIdentifier
-        filteredNodes = Object.values(data_dict).filter(
-          (node) =>
-            node.node_id.startsWith(verticalIdentifier) ||
-            node.node_id.slice(0, 4).includes(verticalIdentifier)
-        );
-      }
-      // Check if building
-      if (buildingIdentifier) {
-        // getall nodes in filtered nodes which have buildingIdentifier in their node_id
-        filteredNodes = filteredNodes.filter((node) =>
-          node.node_id.includes(buildingIdentifier)
-        );
-      }
-      // Check if floor
-      if (floorIdentifier) {
-        // getall nodes in filtered nodes which have floorIdentifier in their node_id
-        filteredNodes = filteredNodes.filter((node) =>
-          node.node_id.includes(floorIdentifier)
-        );
-      }
-  
-      // Check nodeIdentifier
-      if (nodeIdentifier) {
-        // get node with node_id equal to nodeIdentifier
-        filteredNodes = filteredNodes.filter(
-          (node) => node.node_id === nodeIdentifier
-        );
-        // If no node found, try to find the closest match using Levenshtein distance
-        if (filteredNodes.length === 0) {
-          let closestMatch = "";
-          let minDistance = Number.MAX_SAFE_INTEGER;
-          for (const node of Object.values(data_dict)) {
-            const distance = this.getLevenshteinDistance(
-              node.node_id,
-              nodeIdentifier
+            this.addMessage(
+              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
+              "bot"
             );
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestMatch = node.node_id;
-            }
+            this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
+            this.recommendedQuestions = [];
+            this.conversationOptions = this.currentOptions;
+            this.requestUpdate();
           }
-          console.log(
-            "Closest match: " + closestMatch + " with distance: " + minDistance
-          );
-          this.addMessage(
-            `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
-            "bot"
-          );
-  
-          // Show the data for the closest match
-          filteredNodes = Object.values(data_dict).filter(
-            (node) => node.node_id === closestMatch
-          );
-        }
-      }
-  
-      // if 0 nodes found, return No data found
-      if (filteredNodes.length === 0) {
-        let message = "No data found for the identifiers: ";
-        let identifiers = [];
-  
-        if (buildingIdentifier) {
-          identifiers.push("Building - " + buildingIdentifier);
-        }
-  
-        if (verticalIdentifier) {
-          identifiers.push("Vertical - " + verticalIdentifier);
-        }
-  
-        if (floorIdentifier) {
-          identifiers.push("Floor - " + floorIdentifier);
-        }
-  
-        if (nodeIdentifier) {
-          identifiers.push("Node - " + nodeIdentifier);
-        }
-  
-        message += identifiers.join(", ");
-  
-        this.addMessage(message, "bot");
-        return false;
-      }
-  
-      if (accumulator) {
-        // Log all the data
-        const processor = new DataProcessor(filteredNodes);
-        const aggregatedData = processor.aggregateData(accumulator);
-        filteredNodes = [aggregatedData];
-        // Except for latitude, longitude, node_id, name, type, xcor and ycor Calculate for all the other keys
-        // Some are numbers and some are strings like "good", "bad", "average" and others are strings like "43 something"
-        // For numbers, calculate the average, for strings like "good", "bad", "average" calculate the most common value and for strings like "43 something" split the string and calculate average of the numbers and then reattach the string
-      }
-  
-      // if more than 1 node is found return the first node
-      console.log(filteredNodes);
-      if (filteredNodes.length >= 1) {
-        let responseMessage = "";
-        // if accumulator is true, then the data is aggregated
-        if (accumulator) {
-          responseMessage += "Aggregated data with \n";
-          responseMessage += "Accumulator: " + accumulator + "\n";
-        } else {
-          responseMessage += "Data for the identifiers: \n";
-        }
-  
-        // Get the first node
-        let node = filteredNodes[0];
-  
-        // Initialize the response message
-        responseMessage += `${node["node_id"]}:\n`;
-  
-        // Iterate over the properties of the node
-        for (const [key, value] of Object.entries(node)) {
-          responseMessage += key + ": " + value + "\n";
-        }
-  
-        this.addMessage(responseMessage, "bot");
-  
-        if (filteredNodes.length > 1) {
-          // Create a markdown table for better readability
-          // Add title and identifier names before the table
-          let mkdwnTable = "# Data For the Identifiers:\n";
-          if (buildingIdentifier) {
-            mkdwnTable += "Building: " + buildingIdentifier + "\n";
-          }
-          if (verticalIdentifier) {
-            mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
-          }
-          if (floorIdentifier) {
-            mkdwnTable += "Floor: " + floorIdentifier + "\n";
-          }
-          mkdwnTable += "\n";
-  
-          mkdwnTable += "|";
-          for (const key of Object.keys(filteredNodes[0])) {
-            mkdwnTable += key + "|";
-          }
-          mkdwnTable += "\n|";
-          for (const key of Object.keys(filteredNodes[0])) {
-            mkdwnTable += "-|";
-          }
-          mkdwnTable += "\n";
-          for (const node of filteredNodes) {
-            for (const value of Object.values(node)) {
-              mkdwnTable += value + "|";
-            }
-            mkdwnTable += "\n";
-          }
-  
-          // Post to stagbin
-          const response = await fetch("https://api.stagb.in/dev/content", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              data: mkdwnTable,
-            }),
-          });
-          console.log(response);
-          const responseJson = await response.json();
-          console.log(responseJson);
-  
-          // Add table link to the chat
-          this.addMessage(
-            `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
-            "bot"
-          );
-        }
-        return false;
-      }
-  
-      // Fetch data based on identifiers and return true or false
-      return true;
-    }
-  
-    handleKeyDown(e) {
-      if (e.key === "Enter") {
-        e.preventDefault(); // Prevent form submission
-        this.sendMessage();
-      }
-    }
 
-    async sendMessage() {
-      const userInputTrimmed = this.userInput.trim();
-      if (!userInputTrimmed) {
-        return;
-      }
-      let loadingInterval;
-    
-      if (this.stringInput) {
-        this.stringInput = false;
-        this.addMessage(userInputTrimmed, "user");
-    
-        const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
-        if (lastBotMessage.includes("Please enter your question:")) {
-          let dotCount = 0;
-          loadingInterval = setInterval(() => {
-            dotCount = (dotCount % 3) + 1;
-            const dots = '●'.repeat(dotCount);
-    
-            if (this.messages[this.messages.length - 1].sender === 'bot' &&
-              this.messages[this.messages.length - 1].text.startsWith('●')) {
-                this.messages.pop();
-            }
-    
-            this.addMessage(dots, "bot");
-          }, 500);
-    
-          try {
-            const temporalDataKeywords = [
-              'past', 'last', 'history', 'historical', 'trend', 'over time',
-              'yesterday', 'week', 'month', 'year', 'hour', 'day'
-            ];
-    
-            const tempHumidityKeywords = ['temperature', 'humidity'];
-            const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
-            const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
-    
-            const response = await this.sendMessageToBackend(userInputTrimmed);
-    
-            let responseData;
-            try {
-              responseData = typeof response === 'string' ? JSON.parse(response) : response;
-            } catch (parseError) {
-              responseData = {
-                response: response || "I received a response, but it couldn't be parsed.",
-                is_temporal: false
-              };
-            }
-    
-            // ADDED: Explicit location extraction from input
-            const extractedLocation = this.extractLocation(userInputTrimmed);
-            console.log('Extracted Location:', extractedLocation);
-    
-            if (loadingInterval) {
-              clearInterval(loadingInterval);
-            }
-    
-            if (this.messages[this.messages.length - 1].text.startsWith('●')) {
-              this.messages.pop();
-            }
-    
-            // MODIFIED: Use extracted location for validation
-            const isLocationValid = 
-              extractedLocation && 
-              ['Kohli Block', 'Vindhya'].some(
-                location => extractedLocation.toLowerCase() === location.toLowerCase()
-              );
+          else if (isTempHumidityQuery && isLocationValid) {
+            const indoorButtonId = `indoorButton_${Date.now()}`;
+            const outdoorButtonId = `outdoorButton_${Date.now()}`;
 
-
-              if (isTemporalDataQuery && isTempHumidityQuery) {
-                const iconId = `visualizeIcon_${Date.now()}`;
-    
-                this.addMessage(`${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
-                    <img src="/static/images/bar1.png" alt="Visualize" />
-                  </div>`, "bot");
-    
-                setTimeout(() => {
-                  const icon = this.shadowRoot.getElementById(iconId);
-                  if (icon) {
-                    icon.addEventListener("click", () => {
-                      console.log("Visualization icon clicked!");
-                      const encodedQuery = encodeURIComponent(userInputTrimmed);
-                      this.openVisualizationModal(encodedQuery);
-                    });
-                  }
-                }, 100);
-    
-                this.addMessage(
-                  "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-                  "bot"
-                );
-                this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-                this.recommendedQuestions = [];
-                this.conversationOptions = this.currentOptions;
-                this.requestUpdate();
-              }
-    
-            else if (isTempHumidityQuery && isLocationValid) {
-              const indoorButtonId = `indoorButton_${Date.now()}`;
-              const outdoorButtonId = `outdoorButton_${Date.now()}`;
-    
-              this.addMessage(`${responseData.response}\n\n<div class="location-buttons">
+            this.addMessage(`${responseData.response}\n\n<div class="location-buttons">
                   <button id="${indoorButtonId}" class="location-btn">Indoor</button>
                   <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
                 </div>`, "bot");
-    
-              setTimeout(() => {
-                const indoorButton = this.shadowRoot.getElementById(indoorButtonId);
-                const outdoorButton = this.shadowRoot.getElementById(outdoorButtonId);
-    
-                if (indoorButton) {
-                  indoorButton.addEventListener('click', () => this.handleLocationButton('Indoor'));
-                }
-                if (outdoorButton) {
-                  outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
-                }
-              }, 100);
-            } else {
-              this.addMessage(responseData.response, "bot");
-    
-              this.addMessage(
-                "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-                "bot"
-              );
-    
-              this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-              this.recommendedQuestions = [];
-              this.conversationOptions = this.currentOptions;
-              this.requestUpdate();
-            }
-          } catch (error) {
-            if (loadingInterval) {
-              clearInterval(loadingInterval);
-            }
-    
-            console.error("Error processing question:", error);
-            this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
+
+            setTimeout(() => {
+              const indoorButton = this.shadowRoot.getElementById(indoorButtonId);
+              const outdoorButton = this.shadowRoot.getElementById(outdoorButtonId);
+
+              if (indoorButton) {
+                indoorButton.addEventListener('click', () => this.handleLocationButton('Indoor'));
+              }
+              if (outdoorButton) {
+                outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
+              }
+            }, 100);
+          } else {
+            this.addMessage(responseData.response, "bot");
+
+            this.addMessage(
+              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
+              "bot"
+            );
+
+            this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
+            this.recommendedQuestions = [];
+            this.conversationOptions = this.currentOptions;
+            this.requestUpdate();
+          }
+        } catch (error) {
+          if (loadingInterval) {
+            clearInterval(loadingInterval);
+          }
+
+          console.error("Error processing question:", error);
+          this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
+          this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
+          this.currentOptions = conversationTree.nodes.MainMenu.options;
+          this.recommendedQuestions = [];
+          this.conversationOptions = [];
+          this.requestUpdate();
+        }
+      } else if (lastBotMessage.includes("Would you like to:")) {
+        // Handle continue/exit selection
+        if (userInputTrimmed === "1") {
+          this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
+          this.currentOptions = [];
+          this.stringInput = true;
+          this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
+          this.requestUpdate();
+        } else if (userInputTrimmed === "3") {
+          this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
+          // Reset to main menu after exit
+          setTimeout(() => {
             this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
             this.currentOptions = conversationTree.nodes.MainMenu.options;
             this.recommendedQuestions = [];
             this.conversationOptions = [];
             this.requestUpdate();
-          }
-        } else if (lastBotMessage.includes("Would you like to:")) {
-          // Handle continue/exit selection
-          if (userInputTrimmed === "1") {
-            this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
-            this.currentOptions = [];
-            this.stringInput = true;
-            this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
-            this.requestUpdate();
-          } else if (userInputTrimmed === "3") {
-            this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
-            // Reset to main menu after exit
-            setTimeout(() => {
-              this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
-              this.currentOptions = conversationTree.nodes.MainMenu.options;
-              this.recommendedQuestions = [];
-              this.conversationOptions = [];
-              this.requestUpdate();
-            }, 1000);
-          }
-        } else {
-          // Other existing logic remains the same
-          let continueConversation = await this.fetchDataAndAskContinue(
-            false,
-            false,
-            false,
-            false,
-            userInputTrimmed
-          );
-          if (!continueConversation) {
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Exit Chat",
-              "bot"
-            );
-            this.currentOptions = [
-              { text: "1", next: "AskQuestionNode" },
-              { text: "2", next: "ExitChatNode" }
-            ];
-            this.recommendedQuestions = [];
-            this.conversationOptions = this.currentOptions;
-            this.requestUpdate();
-          }
-          this.buildingIdentifier = "";
-          this.verticalIdentifier = "";
-          this.floorIdentifier = "";
-        }
-  
-        this.resetInputAndPopulateMessages();
-        return;
-      }
-      // Rest of the existing sendMessage function remains unchanged
-      const selectedOption = this.currentOptions.find(
-        (option) => option.text === userInputTrimmed
-      );
-      let nextNodeKey = "";
-      let responseMessage = "";
-      let error = false;
-  
-      this.addMessage(userInputTrimmed, "user");
-  
-      if (selectedOption) {
-        nextNodeKey = selectedOption.next;
-  
-        let lastBotMessage = this.messages[this.messages.length - 2].text;
-        console.log("Last bot message: " + lastBotMessage);
-        console.log(selectedOption);
-        if (selectedOption.identifier) {
-          console.log("Selected option identifier: " + selectedOption.identifier);
-          if (lastBotMessage.includes("Which building data do you need?")) {
-            this.buildingIdentifier = selectedOption.identifier;
-          } else if (
-            lastBotMessage.includes("Please select a floor by entering")
-          ) {
-            this.floorIdentifier = selectedOption.identifier;
-          } else if (lastBotMessage.includes("Please select a vertical")) {
-            this.verticalIdentifier = selectedOption.identifier;
-          }
-        }
-  
-        if (selectedOption.accumulator) {
-          this.acc = selectedOption.accumulator;
-        }
-  
-        if (selectedOption.textInput) {
-          this.stringInput = true;
-        }
-  
-        console.log(
-          "Identifiers: Building - " +
-          this.buildingIdentifier +
-          ", Vertical - " +
-          this.verticalIdentifier +
-          ", Floor - " +
-          this.floorIdentifier
-        );
-  
-        if (selectedOption.terminate) {
-          let continueConversation = await this.fetchDataAndAskContinue(
-            this.buildingIdentifier,
-            this.verticalIdentifier,
-            this.floorIdentifier,
-            this.acc
-          );
-          if (!continueConversation) {
-            this.addMessage(
-              "Thank you for using the chatbot. Have a great day!",
-              "bot"
-            );
-            this.currentOptions = [
-              { text: "1", next: "BuildingNode" },
-              { text: "2", next: "VerticalNode" },
-              { text: "3", next: "NodeSpecificFinalNode", textInput: true },
-              { text: "4", next: "ConversationalModeOptions" }
-            ];
-          }
-  
-          this.buildingIdentifier = "";
-          this.verticalIdentifier = "";
-          this.floorIdentifier = "";
-        }
-  
-        const nextNode = conversationTree.nodes[nextNodeKey];
-        if (nextNode) {
-          responseMessage = nextNode.message;
-          this.currentOptions = nextNode.options || [];
-  
-          // New logic for handling recommended questions
-          if (nextNodeKey === "AskQuestionNode") {
-            this.stringInput = true;
-            this.recommendedQuestions = nextNode.recommendedQuestions || [];
-            this.conversationOptions = this.currentOptions; // Preserve conversation options
-            this.requestUpdate();
-          } else {
-            this.recommendedQuestions = [];
-            this.conversationOptions = this.currentOptions; // Preserve conversation options
-          }
-  
-          this.currentMessageIndex++;
-          this.lastCorrectMessageIndex = this.currentMessageIndex;
-        } else {
-          responseMessage = "Error: Invalid next node";
-          error = true;
+          }, 1000);
         }
       } else {
-        responseMessage = "Error: Invalid option selected";
-        error = true;
-      }
-  
-      this.addMessage(responseMessage, "bot");
-  
-      if (error) {
-        const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
-        this.addMessage(lastCorrectMessage.text, "bot");
-        error = false;
-      }
-  
-      this.resetInputAndPopulateMessages();
-    }
-
-
-    extractLocation(input) {
-      const knownLocations = ['Kohli Block', 'Vindhya'];
-      const lowercaseInput = input.toLowerCase();
-      
-      const matchedLocation = knownLocations.find(location => 
-        lowercaseInput.includes(location.toLowerCase())
-      );
-  
-      return matchedLocation;
-    }
-  
-  
-    async handleLocationButton(location) {
-      // Send a follow-up query to get location-specific information
-      try {
-        const locationQuery = `${this.messages[this.messages.length - 2].text} ${location} temperature`;
-
-        const lastMessage = this.messages[this.messages.length - 1];
-        if (lastMessage.text.includes('<div class="location-buttons">')) {
-          // Modify the last message to remove the buttons
-          lastMessage.text = lastMessage.text.replace(
-            /<div class="location-buttons">.*?<\/div>/s, 
-            ''
+        // Other existing logic remains the same
+        let continueConversation = await this.fetchDataAndAskContinue(
+          false,
+          false,
+          false,
+          false,
+          userInputTrimmed
+        );
+        if (!continueConversation) {
+          this.addMessage(
+            "Would you like to:\n1. Ask Another Question\n2. Exit Chat",
+            "bot"
           );
-          this.populateMessages(); // Refresh messages to reflect change
+          this.currentOptions = [
+            { text: "1", next: "AskQuestionNode" },
+            { text: "2", next: "ExitChatNode" }
+          ];
+          this.recommendedQuestions = [];
+          this.conversationOptions = this.currentOptions;
+          this.requestUpdate();
+        }
+        this.buildingIdentifier = "";
+        this.verticalIdentifier = "";
+        this.floorIdentifier = "";
+      }
+
+      this.resetInputAndPopulateMessages();
+      return;
+    }
+    // Rest of the existing sendMessage function remains unchanged
+    const selectedOption = this.currentOptions.find(
+      (option) => option.text === userInputTrimmed
+    );
+    let nextNodeKey = "";
+    let responseMessage = "";
+    let error = false;
+
+    this.addMessage(userInputTrimmed, "user");
+
+    if (selectedOption) {
+      nextNodeKey = selectedOption.next;
+
+      let lastBotMessage = this.messages[this.messages.length - 2].text;
+      console.log("Last bot message: " + lastBotMessage);
+      console.log(selectedOption);
+      if (selectedOption.identifier) {
+        console.log("Selected option identifier: " + selectedOption.identifier);
+        if (lastBotMessage.includes("Which building data do you need?")) {
+          this.buildingIdentifier = selectedOption.identifier;
+        } else if (
+          lastBotMessage.includes("Please select a floor by entering")
+        ) {
+          this.floorIdentifier = selectedOption.identifier;
+        } else if (lastBotMessage.includes("Please select a vertical")) {
+          this.verticalIdentifier = selectedOption.identifier;
+        }
+      }
+
+      if (selectedOption.accumulator) {
+        this.acc = selectedOption.accumulator;
+      }
+
+      if (selectedOption.textInput) {
+        this.stringInput = true;
+      }
+
+      console.log(
+        "Identifiers: Building - " +
+        this.buildingIdentifier +
+        ", Vertical - " +
+        this.verticalIdentifier +
+        ", Floor - " +
+        this.floorIdentifier
+      );
+
+      if (selectedOption.terminate) {
+        let continueConversation = await this.fetchDataAndAskContinue(
+          this.buildingIdentifier,
+          this.verticalIdentifier,
+          this.floorIdentifier,
+          this.acc
+        );
+        if (!continueConversation) {
+          this.addMessage(
+            "Thank you for using the chatbot. Have a great day!",
+            "bot"
+          );
+          this.currentOptions = [
+            { text: "1", next: "BuildingNode" },
+            { text: "2", next: "VerticalNode" },
+            { text: "3", next: "NodeSpecificFinalNode", textInput: true },
+            { text: "4", next: "ConversationalModeOptions" }
+          ];
         }
 
-  
-        // Animated dots loading effect
-        let dotCount = 0;
-        const loadingInterval = setInterval(() => {
-          dotCount = (dotCount % 3) + 1;
-          const dots = '●'.repeat(dotCount);
-  
-          // Remove previous loading message if exists
-          if (this.messages[this.messages.length - 1].sender === 'bot' &&
-            this.messages[this.messages.length - 1].text.startsWith('●')) {
-            this.messages.pop();
-          }
-  
-          this.addMessage(dots, "bot");
-        }, 500);
-  
-        const response = await this.sendMessageToBackend(locationQuery);
-  
-        // Stop the loading interval
-        clearInterval(loadingInterval);
-  
-        // Remove the last loading message
-        this.messages.pop();
-  
-        // Add the location-specific response
-        this.addMessage(response, "bot");
-  
-        // Provide continuation options
-        this.addMessage(
-          "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-          "bot"
-        );
-        this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-        this.recommendedQuestions = [];
-        this.conversationOptions = this.currentOptions;
-        this.requestUpdate();
-  
-      } catch (error) {
-        console.error("Error processing location-specific query:", error);
-        this.addMessage("Sorry, I couldn't process your location-specific query. Please try again.", "bot");
-        this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
-        this.currentOptions = conversationTree.nodes.MainMenu.options;
-        this.recommendedQuestions = [];
-        this.conversationOptions = [];
-        this.requestUpdate();
+        this.buildingIdentifier = "";
+        this.verticalIdentifier = "";
+        this.floorIdentifier = "";
       }
+
+      const nextNode = conversationTree.nodes[nextNodeKey];
+      if (nextNode) {
+        responseMessage = nextNode.message;
+        this.currentOptions = nextNode.options || [];
+
+        // New logic for handling recommended questions
+        if (nextNodeKey === "AskQuestionNode") {
+          this.stringInput = true;
+          this.recommendedQuestions = nextNode.recommendedQuestions || [];
+          this.conversationOptions = this.currentOptions; // Preserve conversation options
+          this.requestUpdate();
+        } else {
+          this.recommendedQuestions = [];
+          this.conversationOptions = this.currentOptions; // Preserve conversation options
+        }
+
+        this.currentMessageIndex++;
+        this.lastCorrectMessageIndex = this.currentMessageIndex;
+      } else {
+        responseMessage = "Error: Invalid next node";
+        error = true;
+      }
+    } else {
+      responseMessage = "Error: Invalid option selected";
+      error = true;
     }
-    
-  
-  
-    async openVisualizationModal(query) {
+
+    this.addMessage(responseMessage, "bot");
+
+    if (error) {
+      const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
+      this.addMessage(lastCorrectMessage.text, "bot");
+      error = false;
+    }
+
+    this.resetInputAndPopulateMessages();
+  }
+
+
+  extractLocation(input) {
+    const knownLocations = ['Kohli Block', 'Vindhya'];
+    const lowercaseInput = input.toLowerCase();
+
+    const matchedLocation = knownLocations.find(location =>
+      lowercaseInput.includes(location.toLowerCase())
+    );
+
+    return matchedLocation;
+  }
+
+
+  async handleLocationButton(location) {
+    // Send a follow-up query to get location-specific information
+    try {
+      const locationQuery = `${this.messages[this.messages.length - 2].text} ${location} temperature`;
+
+      const lastMessage = this.messages[this.messages.length - 1];
+      if (lastMessage.text.includes('<div class="location-buttons">')) {
+        // Modify the last message to remove the buttons
+        lastMessage.text = lastMessage.text.replace(
+          /<div class="location-buttons">.*?<\/div>/s,
+          ''
+        );
+        this.populateMessages(); // Refresh messages to reflect change
+      }
+
+
+      // Animated dots loading effect
+      let dotCount = 0;
+      const loadingInterval = setInterval(() => {
+        dotCount = (dotCount % 3) + 1;
+        const dots = '●'.repeat(dotCount);
+
+        // Remove previous loading message if exists
+        if (this.messages[this.messages.length - 1].sender === 'bot' &&
+          this.messages[this.messages.length - 1].text.startsWith('●')) {
+          this.messages.pop();
+        }
+
+        this.addMessage(dots, "bot");
+      }, 500);
+
+      const response = await this.sendMessageToBackend(locationQuery);
+
+      // Stop the loading interval
+      clearInterval(loadingInterval);
+
+      // Remove the last loading message
+      this.messages.pop();
+
+      // Add the location-specific response
+      this.addMessage(response, "bot");
+
+      // Provide continuation options
+      this.addMessage(
+        "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
+        "bot"
+      );
+      this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
+      this.recommendedQuestions = [];
+      this.conversationOptions = this.currentOptions;
+      this.requestUpdate();
+
+    } catch (error) {
+      console.error("Error processing location-specific query:", error);
+      this.addMessage("Sorry, I couldn't process your location-specific query. Please try again.", "bot");
+      this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
+      this.currentOptions = conversationTree.nodes.MainMenu.options;
+      this.recommendedQuestions = [];
+      this.conversationOptions = [];
+      this.requestUpdate();
+    }
+  }
+
+
+
+  async openVisualizationModal(query) {
 
 
     const existingModal = this.shadowRoot.getElementById('visualization-modal');
-  if (existingModal) {
-    if (this.currentChart) {
-      this.currentChart.destroy();
-      this.currentChart = null;
+    if (existingModal) {
+      if (this.currentChart) {
+        this.currentChart.destroy();
+        this.currentChart = null;
+      }
+      this.shadowRoot.removeChild(existingModal);
     }
-    this.shadowRoot.removeChild(existingModal);
-  }
-      // Parameter keywords for identifying different types of parameters
-      const parameterKeywords = {
-        // Temperature parameters
-        'temperature': ['temperature', 'temp', 'ambient temperature', 'celsius', 'fahrenheit'],
-  
-        // Humidity parameters
-        'humidity': ['humidity', 'relative humidity', 'moisture'],
-  
-        // Air quality parameters
-        'co2': ['co2', 'carbon dioxide'],
-        'co': ['co', 'carbon monoxide'],
-        'pm2.5': ['pm2.5', 'particulate matter', 'fine particles'],
-        'pm10': ['pm10', 'coarse particles'],
-        'gas': ['gas', 'tvoc', 'voc'],
-        'air quality': ['aqi', 'air quality', 'air quality index'],
-  
-        // Water parameters
-        'ph': ['ph', 'acidity'],
-        'turbidity': ['turbidity', 'clarity', 'water clarity'],
-        'tds': ['tds', 'total dissolved solids'],
-        'conductivity': ['conductivity', 'water conductivity'],
-        'water flow': ['flow', 'water flow', 'flow rate'],
-        'water level': ['water level', 'level'],
-  
-        // Energy parameters
-        'voltage': ['voltage', 'volts'],
-        'current': ['current', 'ampere', 'amp'],
-        'power': ['power', 'watt', 'kw', 'kilowatt'],
-        'energy': ['energy', 'kwh', 'kilowatt hour'],
-  
-        // Pressure parameters
-        'pressure': ['pressure', 'barometric pressure', 'atmospheric pressure'],
-  
-        // Noise parameters
-        'noise': ['noise', 'sound', 'decibel', 'db']
-      };
-  
-      // Function to extract parameter from query
-      const extractParameterFromQuery = (query) => {
-        query = query.toLowerCase();
-  
-        // Check each parameter keyword
-        for (const paramType in parameterKeywords) {
-          for (const keyword of parameterKeywords[paramType]) {
-            if (query.includes(keyword)) {
-              return paramType;
+    // Parameter keywords for identifying different types of parameters
+    const parameterKeywords = {
+      // Temperature parameters
+      'temperature': ['temperature', 'temp', 'ambient temperature', 'celsius', 'fahrenheit'],
+
+      // Humidity parameters
+      'humidity': ['humidity', 'relative humidity', 'moisture'],
+
+      // Air quality parameters
+      'co2': ['co2', 'carbon dioxide'],
+      'co': ['co', 'carbon monoxide'],
+      'pm2.5': ['pm2.5', 'particulate matter', 'fine particles'],
+      'pm10': ['pm10', 'coarse particles'],
+      'gas': ['gas', 'tvoc', 'voc'],
+      'air quality': ['aqi', 'air quality', 'air quality index'],
+
+      // Water parameters
+      'ph': ['ph', 'acidity'],
+      'turbidity': ['turbidity', 'clarity', 'water clarity'],
+      'tds': ['tds', 'total dissolved solids'],
+      'conductivity': ['conductivity', 'water conductivity'],
+      'water flow': ['flow', 'water flow', 'flow rate'],
+      'water level': ['water level', 'level'],
+
+      // Energy parameters
+      'voltage': ['voltage', 'volts'],
+      'current': ['current', 'ampere', 'amp'],
+      'power': ['power', 'watt', 'kw', 'kilowatt'],
+      'energy': ['energy', 'kwh', 'kilowatt hour'],
+
+      // Pressure parameters
+      'pressure': ['pressure', 'barometric pressure', 'atmospheric pressure'],
+
+      // Noise parameters
+      'noise': ['noise', 'sound', 'decibel', 'db']
+    };
+
+    // Function to extract parameter from query
+    const extractParameterFromQuery = (query) => {
+      query = query.toLowerCase();
+
+      // Check each parameter keyword
+      for (const paramType in parameterKeywords) {
+        for (const keyword of parameterKeywords[paramType]) {
+          if (query.includes(keyword)) {
+            return paramType;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    // Function to find matching parameter in data
+    const findMatchingParameter = (paramType, availableParams) => {
+      paramType = paramType.toLowerCase();
+
+      // First check for exact match
+      for (const param of availableParams) {
+        if (param.toLowerCase() === paramType) {
+          return param;
+        }
+      }
+
+      // Then check for keyword matches
+      if (parameterKeywords[paramType]) {
+        for (const keyword of parameterKeywords[paramType]) {
+          for (const param of availableParams) {
+            if (param.toLowerCase().includes(keyword)) {
+              return param;
             }
           }
         }
-  
-        return null;
-      };
-  
-      // Function to find matching parameter in data
-      const findMatchingParameter = (paramType, availableParams) => {
-        paramType = paramType.toLowerCase();
-  
-        // First check for exact match
-        for (const param of availableParams) {
-          if (param.toLowerCase() === paramType) {
-            return param;
-          }
+      }
+
+      // Check if any available param contains the paramType
+      for (const param of availableParams) {
+        if (param.toLowerCase().includes(paramType)) {
+          return param;
         }
-  
-        // Then check for keyword matches
-        if (parameterKeywords[paramType]) {
-          for (const keyword of parameterKeywords[paramType]) {
-            for (const param of availableParams) {
-              if (param.toLowerCase().includes(keyword)) {
-                return param;
-              }
-            }
-          }
-        }
-  
-        // Check if any available param contains the paramType
-        for (const param of availableParams) {
-          if (param.toLowerCase().includes(paramType)) {
-            return param;
-          }
-        }
-  
-        return null;
-      };
-  
-      // Create modal container
-      const modal = document.createElement('div');
-      modal.id = 'visualization-modal';
-      modal.innerHTML = `
+      }
+
+      return null;
+    };
+
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.id = 'visualization-modal';
+    modal.innerHTML = `
         <style>
           #visualization-modal {
           position: fixed;
@@ -2124,176 +2124,133 @@ flex-direction: row;
           <div id="error-message" style="display: none; color: red; text-align: center;"></div>
         </div>
       `;
-  
-      // Append to shadow root
-      this.shadowRoot.appendChild(modal);
-      requestAnimationFrame(() => {
-        modal.classList.add('show');
-      });
-  
-      // Add close event listeners
-      const closeButton = this.shadowRoot.getElementById('visualization-close');
-      const modalContainer = this.shadowRoot.getElementById('visualization-modal');
-      const chartCanvas = this.shadowRoot.getElementById('visualization-chart');
-      const loadingSpinner = this.shadowRoot.getElementById('loading-spinner');
-      const errorMessage = this.shadowRoot.getElementById('error-message');
-  
-      closeButton.addEventListener('click', () => {
-        this.shadowRoot.removeChild(modal);
-      });
-  
-      // Close modal if clicked outside content
-      modalContainer.addEventListener('click', (event) => {
-        if (event.target === modalContainer) {
-          this.shadowRoot.removeChild(modal);
-        }
-      });
 
-      closeButton.addEventListener('click', () => {
+    // Append to shadow root
+    this.shadowRoot.appendChild(modal);
+    requestAnimationFrame(() => {
+      modal.classList.add('show');
+    });
+
+    // Add close event listeners
+    const closeButton = this.shadowRoot.getElementById('visualization-close');
+    const modalContainer = this.shadowRoot.getElementById('visualization-modal');
+    const chartCanvas = this.shadowRoot.getElementById('visualization-chart');
+    const loadingSpinner = this.shadowRoot.getElementById('loading-spinner');
+    const errorMessage = this.shadowRoot.getElementById('error-message');
+
+    closeButton.addEventListener('click', () => {
+      this.shadowRoot.removeChild(modal);
+    });
+
+    // Close modal if clicked outside content
+    modalContainer.addEventListener('click', (event) => {
+      if (event.target === modalContainer) {
+        this.shadowRoot.removeChild(modal);
+      }
+    });
+
+    closeButton.addEventListener('click', () => {
+      // Destroy chart before removing modal
+      if (this.currentChart) {
+        this.currentChart.destroy();
+        this.currentChart = null;
+      }
+      this.shadowRoot.removeChild(modal);
+    });
+
+    // Close modal if clicked outside content
+    modalContainer.addEventListener('click', (event) => {
+      if (event.target === modalContainer) {
         // Destroy chart before removing modal
         if (this.currentChart) {
           this.currentChart.destroy();
           this.currentChart = null;
         }
         this.shadowRoot.removeChild(modal);
+      }
+    });
+
+    try {
+      // Decode and get the original query
+      const decodedQuery = decodeURIComponent(query);
+
+      // Fetch data from the backend
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ query: decodedQuery })
       });
-    
-      // Close modal if clicked outside content
-      modalContainer.addEventListener('click', (event) => {
-        if (event.target === modalContainer) {
-          // Destroy chart before removing modal
-          if (this.currentChart) {
-            this.currentChart.destroy();
-            this.currentChart = null;
-          }
-          this.shadowRoot.removeChild(modal);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Determine if it's a temporal query
+      const isTemporal = data.is_temporal || false;
+
+      // Extract parameter from query
+      const parameterType = extractParameterFromQuery(decodedQuery);
+
+      // Hide loading spinner
+      loadingSpinner.style.display = 'none';
+      chartCanvas.style.display = 'block';
+
+      // Render chart using Chart.js
+      const ctx = chartCanvas.getContext('2d');
+
+      // Prepare chart data and options
+      let chartData, chartOptions, matchedParam;
+
+      if (isTemporal) {
+        // Temporal data processing
+        const temporalData = this.extractTemporalData(data);
+        const availableParams = Object.keys(temporalData);
+
+        // Find matching parameter
+        matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
+
+        if (!matchedParam && availableParams.length > 0) {
+          // If no specific parameter found, use the first available parameter
+          matchedParam = availableParams[0];
         }
-      });
-  
-      try {
-        // Decode and get the original query
-        const decodedQuery = decodeURIComponent(query);
-  
-        // Fetch data from the backend
-        const response = await fetch("http://localhost:8001/debug", {
-          method: "POST",
-          headers: { "Content-Type": "application/json; charset=utf-8" },
-          body: JSON.stringify({ query: decodedQuery })
-        });
-  
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-  
-        const data = await response.json();
-  
-        // Determine if it's a temporal query
-        const isTemporal = data.is_temporal || false;
-  
-        // Extract parameter from query
-        const parameterType = extractParameterFromQuery(decodedQuery);
-  
-        // Hide loading spinner
-        loadingSpinner.style.display = 'none';
-        chartCanvas.style.display = 'block';
-  
-        // Render chart using Chart.js
-        const ctx = chartCanvas.getContext('2d');
-  
-        // Prepare chart data and options
-        let chartData, chartOptions, matchedParam;
-  
-        if (isTemporal) {
-          // Temporal data processing
-          const temporalData = this.extractTemporalData(data);
-          const availableParams = Object.keys(temporalData);
-  
-          // Find matching parameter
-          matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
-  
-          if (!matchedParam && availableParams.length > 0) {
-            // If no specific parameter found, use the first available parameter
-            matchedParam = availableParams[0];
-          }
-  
-          if (matchedParam) {
-            const paramData = temporalData[matchedParam];
-  
-            // Create a dataset for each unique node
-            const nodeDatasets = {};
-            paramData.labels.forEach((label, index) => {
-              const nodeId = paramData.nodeIds[index];
-              if (!nodeDatasets[nodeId]) {
-                nodeDatasets[nodeId] = {
-                  label: `Node ${nodeId}`,
-                  data: [],
-                  labels: [],
-                  borderColor: this.getNodeColor(nodeId),
-                  backgroundColor: this.getNodeColor(nodeId, 0.1),
-                  borderWidth: 2,
-                  fill: true,
-                  tension: 0.2
-                };
-              }
-              nodeDatasets[nodeId].data.push(paramData.values[index]);
-              nodeDatasets[nodeId].labels.push(label);
-            });
-  
-            chartData = {
-              labels: [...new Set(paramData.labels)],
-              datasets: Object.values(nodeDatasets)
-            };
-  
-            chartOptions = {
-              responsive: true,
-              scales: {
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Time'
-                  }
-                },
-                y: {
-                  title: {
-                    display: true,
-                    text: matchedParam
-                  }
-                }
-              }
-            };
-          } else {
-            throw new Error('No suitable parameter found for visualization');
-          }
-        } else {
-          // Current data processing
-          const currentData = this.extractCurrentData(data);
-          const availableParams = Object.keys(currentData);
-  
-          // Find matching parameter
-          matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
-  
-          if (!matchedParam) {
-            throw new Error(`No matching parameter found for "${decodedQuery}"`);
-          }
-  
-          const paramData = currentData[matchedParam];
-  
+
+        if (matchedParam) {
+          const paramData = temporalData[matchedParam];
+
+          // Create a dataset for each unique node
+          const nodeDatasets = {};
+          paramData.labels.forEach((label, index) => {
+            const nodeId = paramData.nodeIds[index];
+            if (!nodeDatasets[nodeId]) {
+              nodeDatasets[nodeId] = {
+                label: `Node ${nodeId}`,
+                data: [],
+                labels: [],
+                borderColor: this.getNodeColor(nodeId),
+                backgroundColor: this.getNodeColor(nodeId, 0.1),
+                borderWidth: 2,
+                fill: true,
+                tension: 0.2
+              };
+            }
+            nodeDatasets[nodeId].data.push(paramData.values[index]);
+            nodeDatasets[nodeId].labels.push(label);
+          });
+
           chartData = {
-            labels: paramData.labels,
-            datasets: [{
-              label: matchedParam,
-              data: paramData.values,
-              backgroundColor: 'rgba(74, 123, 250, 0.7)'
-            }]
+            labels: [...new Set(paramData.labels)],
+            datasets: Object.values(nodeDatasets)
           };
-  
+
           chartOptions = {
             responsive: true,
             scales: {
               x: {
                 title: {
                   display: true,
-                  text: 'Nodes'
+                  text: 'Time'
                 }
               },
               y: {
@@ -2304,303 +2261,346 @@ flex-direction: row;
               }
             }
           };
+        } else {
+          throw new Error('No suitable parameter found for visualization');
         }
-  
-        // Render chart
-   
-     if (this.currentChart) {
-  this.currentChart.destroy();
-  this.currentChart = null;
-}
-    
-        // Render chart
-        this.currentChart = new Chart(ctx, {
-          type: isTemporal ? 'line' : 'bar',
-          data: chartData,
-          options: chartOptions
-        });
-  
-      } catch (error) {
-        // Show error message
-        loadingSpinner.style.display = 'none';
-        errorMessage.textContent = `Error: ${error.message}`;
-        errorMessage.style.display = 'block';
-        console.error('Visualization error:', error);
-      }
-    }
-  
-    // Helper method to generate consistent colors for nodes
-    getNodeColor(nodeId, alpha = 1) {
-      // Simple color generation based on nodeId
-      const colors = [
-        `rgba(74, 123, 250, ${alpha})`,
-        `rgba(255, 99, 132, ${alpha})`,
-        `rgba(54, 162, 235, ${alpha})`,
-        `rgba(255, 206, 86, ${alpha})`,
-        `rgba(75, 192, 192, ${alpha})`,
-        `rgba(153, 102, 255, ${alpha})`,
-        `rgba(255, 159, 64, ${alpha})`
-      ];
-  
-      // Use a simple hash to consistently map nodeId to a color
-      const colorIndex = parseInt(nodeId.replace(/\D/g, '')) % colors.length;
-      return colors[colorIndex];
-    }
-  
-    // Modified helper method to extract temporal data
-    extractTemporalData(data) {
-      const temporalData = {};
-      const nodeData = data.node_data;
-  
-      for (const nodeId in nodeData) {
-        const nodeInfo = nodeData[nodeId];
-        if (nodeInfo.filtered_data) {
-          for (const category in nodeInfo.filtered_data) {
-            const categoryData = nodeInfo.filtered_data[category];
-            if (categoryData.data && categoryData.data.length > 0) {
-              const firstDataPoint = categoryData.data[0];
-  
-              for (const param in firstDataPoint) {
-                if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
-                  if (!temporalData[param]) {
-                    temporalData[param] = {
-                      labels: [],
-                      values: [],
-                      nodeIds: []
-                    };
-                  }
-  
-                  categoryData.data.forEach(point => {
-                    temporalData[param].labels.push(
-                      new Date(point.timestamp || point.created_at).toLocaleString()
-                    );
-                    temporalData[param].values.push(parseFloat(point[param]));
-                    temporalData[param].nodeIds.push(nodeId);
-                  });
-                }
+      } else {
+        // Current data processing
+        const currentData = this.extractCurrentData(data);
+        const availableParams = Object.keys(currentData);
+
+        // Find matching parameter
+        matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
+
+        if (!matchedParam) {
+          throw new Error(`No matching parameter found for "${decodedQuery}"`);
+        }
+
+        const paramData = currentData[matchedParam];
+
+        chartData = {
+          labels: paramData.labels,
+          datasets: [{
+            label: matchedParam,
+            data: paramData.values,
+            backgroundColor: 'rgba(74, 123, 250, 0.7)'
+          }]
+        };
+
+        chartOptions = {
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Nodes'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: matchedParam
               }
             }
           }
-        }
+        };
       }
-  
-      return temporalData;
+
+      // Render chart
+
+      if (this.currentChart) {
+        this.currentChart.destroy();
+        this.currentChart = null;
+      }
+
+      // Render chart
+      this.currentChart = new Chart(ctx, {
+        type: isTemporal ? 'line' : 'bar',
+        data: chartData,
+        options: chartOptions
+      });
+
+    } catch (error) {
+      // Show error message
+      loadingSpinner.style.display = 'none';
+      errorMessage.textContent = `Error: ${error.message}`;
+      errorMessage.style.display = 'block';
+      console.error('Visualization error:', error);
     }
-  
-    // Helper method to extract current data
-    extractCurrentData(data) {
-      const currentData = {};
-      const nodeData = data.node_data;
-  
-      for (const nodeId in nodeData) {
-        for (const category in nodeData[nodeId]) {
-          const categoryData = nodeData[nodeId][category];
-          if (Array.isArray(categoryData) && categoryData.length > 0) {
-            const firstDataPoint = categoryData[0];
-  
+  }
+
+  // Helper method to generate consistent colors for nodes
+  getNodeColor(nodeId, alpha = 1) {
+    // Simple color generation based on nodeId
+    const colors = [
+      `rgba(74, 123, 250, ${alpha})`,
+      `rgba(255, 99, 132, ${alpha})`,
+      `rgba(54, 162, 235, ${alpha})`,
+      `rgba(255, 206, 86, ${alpha})`,
+      `rgba(75, 192, 192, ${alpha})`,
+      `rgba(153, 102, 255, ${alpha})`,
+      `rgba(255, 159, 64, ${alpha})`
+    ];
+
+    // Use a simple hash to consistently map nodeId to a color
+    const colorIndex = parseInt(nodeId.replace(/\D/g, '')) % colors.length;
+    return colors[colorIndex];
+  }
+
+  // Modified helper method to extract temporal data
+  extractTemporalData(data) {
+    const temporalData = {};
+    const nodeData = data.node_data;
+
+    for (const nodeId in nodeData) {
+      const nodeInfo = nodeData[nodeId];
+      if (nodeInfo.filtered_data) {
+        for (const category in nodeInfo.filtered_data) {
+          const categoryData = nodeInfo.filtered_data[category];
+          if (categoryData.data && categoryData.data.length > 0) {
+            const firstDataPoint = categoryData.data[0];
+
             for (const param in firstDataPoint) {
               if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
-                if (!currentData[param]) {
-                  currentData[param] = {
+                if (!temporalData[param]) {
+                  temporalData[param] = {
                     labels: [],
-                    values: []
+                    values: [],
+                    nodeIds: []
                   };
                 }
-  
-                categoryData.forEach(point => {
-                  currentData[param].labels.push(point.name || nodeId);
-                  currentData[param].values.push(parseFloat(point[param]));
+
+                categoryData.data.forEach(point => {
+                  temporalData[param].labels.push(
+                    new Date(point.timestamp || point.created_at).toLocaleString()
+                  );
+                  temporalData[param].values.push(parseFloat(point[param]));
+                  temporalData[param].nodeIds.push(nodeId);
                 });
               }
             }
           }
         }
       }
-  
-      return currentData;
     }
-  
-  
-    // Modified handleRecommendedQuestion method
-    handleRecommendedQuestion(question) {
-      this.userInput = question;
-      this.recommendedQuestions = []; // Clear recommended questions
-      this.conversationOptions = []; // Clear conversation options
-      this.sendMessage();
-    }
-  
-    handleConversationOption(option) {
-      this.userInput = option;
-      this.conversationOptions = []; // Clear conversation options
-      this.sendMessage();
-    }
-    async sendMessageToBackend(message) {
-      try {
-        const response = await fetch("http://localhost:8001/query", {
-          method: "POST",
-          headers: { "Content-Type": "application/json; charset=utf-8" },
-          body: JSON.stringify({ query: message })
-        });
-        if (response.headers.get("content-type")?.includes("application/json")) {
-          if (response.headers.get("content-type")?.includes("application/json")) {
-            const data = await response.json();
-            return data.response || "Sorry, I couldn't process your question.";
-          } else {
-            console.error("Server returned non-JSON response");
-            return "Server returned an unexpected response format. Please try again later.";
+
+    return temporalData;
+  }
+
+  // Helper method to extract current data
+  extractCurrentData(data) {
+    const currentData = {};
+    const nodeData = data.node_data;
+
+    for (const nodeId in nodeData) {
+      for (const category in nodeData[nodeId]) {
+        const categoryData = nodeData[nodeId][category];
+        if (Array.isArray(categoryData) && categoryData.length > 0) {
+          const firstDataPoint = categoryData[0];
+
+          for (const param in firstDataPoint) {
+            if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
+              if (!currentData[param]) {
+                currentData[param] = {
+                  labels: [],
+                  values: []
+                };
+              }
+
+              categoryData.forEach(point => {
+                currentData[param].labels.push(point.name || nodeId);
+                currentData[param].values.push(parseFloat(point[param]));
+              });
+            }
           }
+        }
+      }
+    }
+
+    return currentData;
+  }
+
+
+  // Modified handleRecommendedQuestion method
+  handleRecommendedQuestion(question) {
+    this.userInput = question;
+    this.recommendedQuestions = []; // Clear recommended questions
+    this.conversationOptions = []; // Clear conversation options
+    this.sendMessage();
+  }
+
+  handleConversationOption(option) {
+    this.userInput = option;
+    this.conversationOptions = []; // Clear conversation options
+    this.sendMessage();
+  }
+  async sendMessageToBackend(message) {
+    try {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ query: message })
+      });
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        if (response.headers.get("content-type")?.includes("application/json")) {
+          const data = await response.json();
+          return data.response || "Sorry, I couldn't process your question.";
         } else {
           console.error("Server returned non-JSON response");
           return "Server returned an unexpected response format. Please try again later.";
         }
-  
-      } catch (error) {
-        console.error("Error communicating with backend:", error);
-        return "Sorry, I couldn't connect to the backend service. Please try again later.";
+      } else {
+        console.error("Server returned non-JSON response");
+        return "Server returned an unexpected response format. Please try again later.";
       }
+
+    } catch (error) {
+      console.error("Error communicating with backend:", error);
+      return "Sorry, I couldn't connect to the backend service. Please try again later.";
     }
-  
-    addMessage(text, sender) {
-  
-  
-      this.messages.push({ text, sender });
-      this.populateMessages(); // Update the UI immediately
-    }
-  
-    resetInputAndPopulateMessages() {
-      this.userInput = ""; // Clear userInput for the next input
-      const inputField = this.shadowRoot.querySelector("input");
-      if (inputField) inputField.value = ""; // Clear input field in the DOM
-      this.populateMessages(); // Update displayed messages
-    }
+  }
+
+  addMessage(text, sender) {
 
 
-    
-  
-    populateMessages() {
-      const messageContainer = this.shadowRoot.getElementById("message-container");
-      messageContainer.innerHTML = "";
-    
-      this.messages.forEach((msg, index) => {
-        const messageWrapper = document.createElement("div");
-        messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
-    
-        // Only add avatar for bot messages
-        if (msg.sender === "bot") {
-          const avatarContainer = document.createElement("div");
-          avatarContainer.className = "chat_user_avatar";
-          avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
-          messageWrapper.appendChild(avatarContainer);
-        }
-    
-        const messageBubble = document.createElement("div");
-        messageBubble.className = "chat_message";
-    
-        // Check if this message is currently being edited
-        if (this.editingMessageIndex === index && msg.sender === 'user') {
-          const editInput = document.createElement("div");
-          editInput.className = "edit-message-input";
-          
-          const input = document.createElement("input");
-          input.type = "text";
-          input.value = this.editedMessage;
-          input.addEventListener('input', (e) => {
-            this.editedMessage = e.target.value;
-          });
-        
-          const saveButton = document.createElement("button");
-          saveButton.innerHTML = "✓";
-          saveButton.className = "edit-save-btn";
-          saveButton.addEventListener('click', () => this.saveEditedMessage());
-        
-          const cancelButton = document.createElement("button");
-          cancelButton.innerHTML = "✗";
-          cancelButton.className = "edit-cancel-btn";
-          cancelButton.addEventListener('click', () => this.cancelEditMessage());
-        
-          editInput.appendChild(input);
-          // Add save button inside the input
-          editInput.appendChild(saveButton);
-          // Add cancel button outside the input
-          editInput.appendChild(cancelButton);
-          
-          messageBubble.appendChild(editInput);
+    this.messages.push({ text, sender });
+    this.populateMessages(); // Update the UI immediately
+  }
+
+  resetInputAndPopulateMessages() {
+    this.userInput = ""; // Clear userInput for the next input
+    const inputField = this.shadowRoot.querySelector("input");
+    if (inputField) inputField.value = ""; // Clear input field in the DOM
+    this.populateMessages(); // Update displayed messages
+  }
+
+
+
+
+  populateMessages() {
+    const messageContainer = this.shadowRoot.getElementById("message-container");
+    messageContainer.innerHTML = "";
+
+    this.messages.forEach((msg, index) => {
+      const messageWrapper = document.createElement("div");
+      messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
+
+      // Only add avatar for bot messages
+      if (msg.sender === "bot") {
+        const avatarContainer = document.createElement("div");
+        avatarContainer.className = "chat_user_avatar";
+        avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
+        messageWrapper.appendChild(avatarContainer);
+      }
+
+      const messageBubble = document.createElement("div");
+      messageBubble.className = "chat_message";
+
+      // Check if this message is currently being edited
+      if (this.editingMessageIndex === index && msg.sender === 'user') {
+        const editInput = document.createElement("div");
+        editInput.className = "edit-message-input";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = this.editedMessage;
+        input.addEventListener('input', (e) => {
+          this.editedMessage = e.target.value;
+        });
+
+        const saveButton = document.createElement("button");
+        saveButton.innerHTML = "✓";
+        saveButton.className = "edit-save-btn";
+        saveButton.addEventListener('click', () => this.saveEditedMessage());
+
+        const cancelButton = document.createElement("button");
+        cancelButton.innerHTML = "✗";
+        cancelButton.className = "edit-cancel-btn";
+        cancelButton.addEventListener('click', () => this.cancelEditMessage());
+
+        editInput.appendChild(input);
+        // Add save button inside the input
+        editInput.appendChild(saveButton);
+        // Add cancel button outside the input
+        editInput.appendChild(cancelButton);
+
+        messageBubble.appendChild(editInput);
+      } else {
+        // Check if the message contains visualization icon
+        const hasVisualizationIcon = msg.text.includes('visualization-icon');
+
+        // Create content container
+        const messageContent = document.createElement("div");
+
+        if (hasVisualizationIcon) {
+          // For messages with visualization icons, we need to handle them specially
+          // Split the message into text part and icon part
+          const textAndIcon = msg.text.split('<div id="');
+
+          // Add the text part
+          if (textAndIcon[0]) {
+            const textPart = document.createElement("div");
+            textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
+            messageContent.appendChild(textPart);
+          }
+
+          // Add the icon part
+          if (textAndIcon.length > 1) {
+            const iconPart = document.createElement("div");
+            iconPart.id = textAndIcon[1].split('"')[0];
+            iconPart.className = "visualization-icon";
+            iconPart.innerHTML = '<img src="/static/images/bar1.png" alt="Visualize" />';
+
+            // Add event listener to the icon
+            setTimeout(() => {
+              iconPart.addEventListener("click", () => {
+                console.log("Visualization icon clicked!");
+                const encodedQuery = encodeURIComponent(
+                  this.messages[index - 1]?.text || ""
+                );
+                this.openVisualizationModal(encodedQuery);
+              });
+            }, 50);
+
+            messageContent.appendChild(iconPart);
+          }
         } else {
-          // Check if the message contains visualization icon
-          const hasVisualizationIcon = msg.text.includes('visualization-icon');
-          
-          // Create content container
-          const messageContent = document.createElement("div");
-          
-          if (hasVisualizationIcon) {
-            // For messages with visualization icons, we need to handle them specially
-            // Split the message into text part and icon part
-            const textAndIcon = msg.text.split('<div id="');
-            
-            // Add the text part
-            if (textAndIcon[0]) {
-              const textPart = document.createElement("div");
-              textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
-              messageContent.appendChild(textPart);
-            }
-            
-            // Add the icon part
-            if (textAndIcon.length > 1) {
-              const iconPart = document.createElement("div");
-              iconPart.id = textAndIcon[1].split('"')[0];
-              iconPart.className = "visualization-icon";
-              iconPart.innerHTML = '<img src="/static/images/bar1.png" alt="Visualize" />';
-              
-              // Add event listener to the icon
-              setTimeout(() => {
-                iconPart.addEventListener("click", () => {
-                  console.log("Visualization icon clicked!");
-                  const encodedQuery = encodeURIComponent(
-                    this.messages[index-1]?.text || ""
-                  );
-                  this.openVisualizationModal(encodedQuery);
-                });
-              }, 50);
-              
-              messageContent.appendChild(iconPart);
-            }
-          } else {
-            // For regular messages
-            messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
-          }
-    
-          // Add edit icon for user messages
-          if (msg.sender === 'user') {
-            const editIcon = document.createElement("span");
-            editIcon.className = "edit-message-icon";
-            editIcon.innerHTML = "✎";
-            editIcon.addEventListener('click', () => this.startEditMessage(index));
-            
-            messageBubble.appendChild(editIcon);
-          }
-    
-          messageBubble.appendChild(messageContent);
+          // For regular messages
+          messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
         }
-    
-        messageWrapper.appendChild(messageBubble);
-        messageContainer.appendChild(messageWrapper);
-      });
-    
-      // Auto-scroll to the bottom after populating messages
-      this.scrollToBottom();
-    }
 
-    handleOptionSelection(optionText) {
-      this.userInput = optionText;
-      this.sendMessage();
-    }
+        // Add edit icon for user messages
+        if (msg.sender === 'user') {
+          const editIcon = document.createElement("span");
+          editIcon.className = "edit-message-icon";
+          editIcon.innerHTML = "✎";
+          editIcon.addEventListener('click', () => this.startEditMessage(index));
 
-    
-  
-    // Modify the render method to implement the toggle button and conditional display
-    // Modify the render method to implement the requested changes
-    render() {
-      return html`
+          messageBubble.appendChild(editIcon);
+        }
+
+        messageBubble.appendChild(messageContent);
+      }
+
+      messageWrapper.appendChild(messageBubble);
+      messageContainer.appendChild(messageWrapper);
+    });
+
+    // Auto-scroll to the bottom after populating messages
+    this.scrollToBottom();
+  }
+
+  handleOptionSelection(optionText) {
+    this.userInput = optionText;
+    this.sendMessage();
+  }
+
+
+
+  // Modify the render method to implement the toggle button and conditional display
+  // Modify the render method to implement the requested changes
+  render() {
+    return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
           src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
@@ -2685,7 +2685,7 @@ flex-direction: row;
         </div>
       </div>
     `;
-    }
   }
-  
-  customElements.define("chat-bot-component", ChatBotComponent);
+}
+
+customElements.define("chat-bot-component", ChatBotComponent);
