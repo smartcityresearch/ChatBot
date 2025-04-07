@@ -1,14 +1,25 @@
+
+
+
 import {
   LitElement,
   html,
   css,
 } from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
+// Import Chart.js 
+import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
 import { conversationTree } from "./conversation.js";
 
 class DataProcessor {
   constructor(data) {
     this.data = data;
   }
+
+  static properties = {
+    // ... existing properties
+    editingMessageIndex: { type: Number },
+    editedMessage: { type: String }
+  };
 
   // Parse the first numeric part of a string if applicable
   parseValue(value) {
@@ -98,54 +109,73 @@ class ChatBotComponent extends LitElement {
   showingTemperatureOptions = false;
   originalQuery = "";
   static styles = css`
+
   /* Existing styles remain the same */
   
-  .chat-option {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #007bff;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease-out;
-  }
+/* Base styling remains the same */
+/* Base styling remains the same */
+.chat-option {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease-out;
+}
 
-  .chat-option:active {
-    transform: scale(1.2);
-  }
+.chat-option:active {
+  transform: scale(1.2);
+}
 
-  .chat-option i {
-    font-size: 20px;
-  }
+.chat-option i {
+  font-size: 20px;
+}
 
+/* Modified chatbot popup for responsiveness */
+.chatbot-popup {
+  position: absolute;
+  bottom: 90px;
+  right: 20px;
+  width: 320px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(148, 43, 43, 0);
+  display: none;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  max-width: 95vw; /* Limit width on smaller screens */
+}
+
+@media screen and (max-width: 480px) {
   .chatbot-popup {
-    position: absolute;
-    bottom: 90px;
-    right: 20px;
-    width: 320px;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(148, 43, 43, 0);
-    display: none;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-  }
-
-  .chatbot-popup.active {
-    display: block;
+    right: 10px;
+    bottom: 80px;
+    width: calc(100vw - 20px); /* Full width minus margins */
   }
   
-/* Hide scrollbar but keep functionality */
+  .chat-option {
+    bottom: 10px;
+    right: 10px;
+  }
+}
+
+.chatbot-popup.active {
+  display: block;
+}
+
+/* Message container - more adaptive height */
 .messages {
-  height: 400px; /* Increased height */
+  height: 400px;
+  max-height: 50vh; /* Responsive height */
   padding: 10px;
   overflow-y: auto;
   display: flex;
@@ -159,120 +189,136 @@ class ChatBotComponent extends LitElement {
   scrollbar-width: none;  /* Firefox */
 }
 
-  .message a {
-    color: #ff8400; /* White color for links */
-    text-decoration: none; /* Remove underline from links */
+@media screen and (max-height: 600px) {
+  .messages {
+    height: 300px;
   }
+}
 
-  .input-area {
-    border-top: none;
+.message a {
+  color: #ff8400;
+  text-decoration: none;
+}
 
-  /* Option 2: Make the border transparent */
+.input-area {
   border-top: 1px solid transparent;
-
-  /* Option 3: Set border color to match the background */
-  border-top: 1px solid #fff; /* Assuming white background */
-
-  /* Existing styles remain the same */
   display: flex;
   align-items: center;
   padding: 5px;
-  }
+}
 
-  .input-area input {
-    width: 75%;
-    padding: 10px;
-    border: 1px solid #aaa;
-    border-radius: 15px;
-    outline: none;
-    background-color: #f0f6ff;
-    transition: all 0.3s ease-in-out; /* Smooth transition */
-  }
+.input-area input {
+  width: 75%;
+  padding: 10px;
+  border: 1px solid #aaa;
+  border-radius: 15px;
+  outline: none;
+  background-color: #f0f6ff;
+  transition: all 0.3s ease-in-out;
+}
 
-  .input-area input:hover {
-    border-color: #007bff; /* Changes border color on hover */
-    background-color: #f5f5f5; /* Slightly changes background */
-    box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5); /* Adds subtle glow */
-  }
+.input-area input:hover {
+  border-color: #007bff;
+  background-color: #f5f5f5;
+  box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+}
 
-  .input-area button {
-    padding: 10px;
-    border-radius: 50%;
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    outline: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px; /* Makes button circular */
-    height: 40px;
-  }
+.input-area button {
+  padding: 10px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
 
-  .input-area button img {
-    width: 20px; /* Adjust icon size */
-    height: 20px;
-  }
+.input-area button img {
+  width: 20px;
+  height: 20px;
+}
 
-  .message-row {
-    display: flex;
-    width: 100%;
-    margin: 4px 0;
-    align-items: center;
-  }
+/* Message styling - adjusted for better mobile display */
+.message-row {
+  display: flex;
+  width: 100%;
+  margin: 4px 0;
+  align-items: center;
+}
 
-  .bot-row {
-    justify-content: flex-start; /* Align bot messages to the left */
-  }
+.bot-row {
+  justify-content: flex-start;
+}
 
-  .user-row {
-    justify-content: flex-end; /* Align user messages to the right */
-  }
+.user-row {
+  justify-content: flex-end;
+}
 
+.message {
+  padding: 8px 12px;
+  border-radius: 12px;
+  max-width: 80%;
+  display: inline-block;
+  word-wrap: break-word; /* Ensure long words don't break layout */
+}
+
+@media screen and (max-width: 480px) {
   .message {
-    padding: 8px 12px;
-    border-radius: 12px;
-    max-width: 80%;
-    display: inline-block;
+    max-width: 85%; /* Wider messages on mobile */
   }
+}
 
-  .bot-message {
-    background-color: #123462; /* Updated color for bot messages */
-    color: white; /* Adjust text color as needed for contrast */
-    margin-left: 8px; /* Space between icon and message */
-  }
+.bot-message {
+  background-color: #123462;
+  color: white;
+  margin-left: 8px;
+}
 
-  .user-message {
-    background-color: #007bff; /* Blue for user */
-    color: white;
-    margin-right: 8px; /* Space between icon and message */
-  }
+.user-message {
+  background-color: #007bff;
+  color: white;
+  margin-right: 8px;
+}
 
+.icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0; /* Prevent icon from shrinking on small screens */
+}
+
+@media screen and (max-width: 350px) {
   .icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
+    width: 25px;
+    height: 25px;
+    font-size: 12px;
   }
+}
 
-  .bot-icon {
-    background-color: #777; /* Darker shade for bot icon */
-    color: #fff; /* White color for icon */
-  }
+.bot-icon {
+  background-color: #777;
+  color: #fff;
+}
 
-  .user-icon {
-    background-color: #dedede; /* Light gray for the user icon background */
-    color: #555; /* Icon color */
-  }
+.user-icon {
+  background-color: #dedede;
+  color: #555;
+}
 
-  .input-area button:hover {
-    background-color: #0056b3; /* Darker shade on hover for visual feedback */
-  }
+.input-area button:hover {
+  background-color: #0056b3;
+}
 
+/* Chat header with responsive adjustments */
 .chat-header {
   position: sticky;
   top: 0;
@@ -284,299 +330,301 @@ class ChatBotComponent extends LitElement {
   color: white;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
-  text-align: center;
-  // /* Wave shape effect */
-  // &::after {
-  //   content: "";
-  //   position: absolute;
-  //   bottom: -10px;
-  //   left: 0;
-  //   right: 0;
-  //   height: 10px;
-  //   background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" fill="%230056b3"/><path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5" fill="%230056b3"/><path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z" fill="%230056b3"/></svg>');
-  //   background-size: cover;
+}
 
-  // position: sticky;
-  // top: 0;
-  // z-index: 10;
-  // display: flex;
-  // align-items: center;
-  // background: linear-gradient(135deg, #2a27da 0%, #00ccff 100%);
-  // padding: 10px;
-  // color: white;
-  // border-top-left-radius: 10px;
-  // border-top-right-radius: 10px;
-
-
-  
-  }
-
-  .chat-header::after {
+.chat-header::after {
   content: "";
   position: absolute;
-  bottom: -5px; /* Moves wave to bottom */
+  bottom: -5px;
   left: 0;
   width: 100%;
-  height: 20px; /* Adjust wave height */
+  height: 20px;
   background-image: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" viewBox="0 0 1440 590" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gradient" x1="0%" y1="50%" x2="100%" y2="50%"><stop offset="5%" stop-color="%230693e3"></stop><stop offset="95%" stop-color="%238ed1fc"></stop></linearGradient></defs><path d="M 0,600 L 0,150 C 114.9282296650718,158.77511961722487 229.8564593301436,167.55023923444975 326,151 C 422.1435406698564,134.44976076555025 499.5023923444975,92.57416267942584 591,85 C 682.4976076555025,77.42583732057416 788.1339712918661,104.15311004784687 895,117 C 1001.8660287081339,129.84688995215313 1109.961722488038,128.81339712918663 1201,132 C 1292.038277511962,135.18660287081337 1366.019138755981,142.5933014354067 1440,150 L 1440,600 L 0,600 Z" fill="url(%23gradient)" fill-opacity="0.53"></path></svg>');
   background-size: cover;
   background-repeat: no-repeat;
   z-index: 5;
 }
-  
+
+/* Responsive chat logo */
+.chat-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: white;
+  padding: 2px;
+  border: 1px solid #ddd;
+  object-fit: cover;
 }
 
-  .chat-logo {
-    width: 30px;  /* Adjust the size as needed */
-    height: 30px;
-    border-radius: 50%;  /* Makes it a perfect circle */
-    background-color: white;  /* White background */
-    padding: 2px;  /* Space between image and border */
-    border: 1px solid #ddd;  /* Optional: Light border for better visibility */
-    object-fit: cover;  /* Ensures the image fits inside the circle */
-  }
+.chat-title {
+  margin-left: 10px;
+  font-weight: bold;
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
+@media screen and (max-width: 350px) {
   .chat-title {
-    margin-left: 10px;  /* Space between logo and title */
-    font-weight: bold;
-    font-size: 18px;
+    font-size: 16px;
   }
-
-  .chat-close {
-    font-size: 25px;
-    font-weight: bold;
-    color: white; /* Text color */
-    background: #00000000; /* Transparent background */
-    border-radius: 50%; /* Keeps the circular shape */
-    border: 2px solid white; /* Adds a white border */
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    margin-left: auto; /* Moves close button to the right */
-    transition: background 0.3s ease-in-out;
-  }
-
-  .icon-image {
-    width: 30px;  /* Adjust size */
-    height: 30px;
-    border-radius: 50%; /* Makes it circular */
-    object-fit: cover;
-  }
-
-  img.icon-image{
-    background-color: white;
-  }
-
-  .chat-box {
-    padding: 16px;
-    background: #e1e3e5;
-    height: 600px;
-    overflow-y: auto;
-    width: 450px;
-    border-radius: 8px;
-  }
-
-  /* General message container */
-    /* Remove user avatar and make message boxes arrow-shaped */
-  .chat_message_wrapper {
-    display: flex;
-    align-items: flex-end;
-    margin-bottom: 15px;
-    position: relative;
-  }
-
-  /* Avatar styling */
-  .chat_user_avatar img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-    .chat_message_wrapper .chat_message:before {
-    content: "";
-    position: absolute;
-    left: -10px;
-    top: 10px;
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-right: 10px solid #F0F2F7;
-  }
-  }
-
-  /* User (Right side) chat message */
-  .chat_message_wrapper.chat_message_right {
-    justify-content: flex-end;
-    text-align: right
-  }
-
   
-  .chat_message_wrapper.chat_message_right .chat_message {
-    background: linear-gradient(135deg, #2a27da 0%, #00ccff 100%);
+  .chat-subtitle {
+    font-size: 10px;
+  }
+}
+
+.chat-close {
+  font-size: 25px;
+  font-weight: bold;
+  color: white;
+  background: transparent;
+  border-radius: 50%;
+  border: 2px solid white;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: auto;
+  transition: background 0.3s ease-in-out;
+}
+
+.icon-image {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+img.icon-image {
+  background-color: white;
+}
+
+/* Responsive chat box */
+.chat-box {
+  padding: 16px;
+  background: #e1e3e5;
+  height: 600px;
+  max-height: 80vh; /* Responsive height */
+  overflow-y: auto;
+  width: 450px;
+  max-width: 100%; /* Full width on smaller screens */
+  border-radius: 8px;
+}
+
+@media screen and (max-width: 480px) {
+  .chat-box {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
+/* Chat message wrapper styling */
+.chat_message_wrapper {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.chat_user_avatar img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.chat_message_wrapper .chat_message:before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 10px solid #F0F2F7;
+}
+
+/* User chat message */
+.chat_message_wrapper.chat_message_right {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.chat_message_wrapper.chat_message_right .chat_message {
+  background: linear-gradient(135deg, #2a27da 0%, #00ccff 100%);
   color: white;
   float: right;
-  max-width: 70%; /* Prevents stretching */
-  margin-left: auto; /* Aligns to the right */
-  text-align: left; /* Keeps text readable */
-  word-break: break-word; /* Ensures long words break */
-  }
-  .chat_message_wrapper.chat_message_right .chat_message:after {
-     content: "";
-    position: absolute;
-    right: 0;
-    top: 10px;
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-left: transparent;
-    border-right: none;
-    margin-left: 0;
+  max-width: 70%;
+  margin-left: auto;
+  text-align: left;
+  word-break: break-word;
+}
 
-  }
+.chat_message_wrapper.chat_message_right .chat_message:after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 10px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: transparent;
+  border-right: none;
+  margin-left: 0;
+}
 
-  /* Bot (Left side) chat message with arrow */
-  .chat_message_wrapper .chat_message {
-    background: #F0F2F7;
-    color: black;
-    float: left;
-    border-radius: 12px;
-    position: relative;
-    padding: 8px 14px;
-    margin-left: 12px; /* Space for arrow */
-  }
-/* For older browsers that don't support the &::-webkit-scrollbar syntax */
+/* Bot chat message */
+.chat_message_wrapper .chat_message {
+  background: #F0F2F7;
+  color: black;
+  float: left;
+  border-radius: 12px;
+  position: relative;
+  padding: 8px 14px;
+  margin-left: 12px;
+}
+
+/* Hide scrollbar for messages */
 .messages::-webkit-scrollbar {
   display: none;
 }
-  /* Message bubbles */
+
+/* Message bubbles */
+.chat_message {
+  max-width: 60%;
+  padding: 8px 14px;
+  border-radius: 12px;
+  position: relative;
+  margin: 4px 0;
+  font-size: 14px;
+  display: inline-block;
+  text-align: left;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+@media screen and (max-width: 480px) {
   .chat_message {
-    max-width: 60%;
-    padding: 8px 14px;  /* Proper spacing inside the bubble */
-    border-radius: 12px;
-    position: relative;
-    margin: 4px 0;  /* Reduce margin for better spacing */
-    font-size: 14px;
-    display: inline-block; /* Makes sure the bubble wraps content */
-    text-align: left; /* Ensure left alignment of text */
-    line-height: 1.4; /* Improve readability */
-    word-wrap: break-word; /* Ensure long words don't overflow */
+    max-width: 75%; /* Wider messages on mobile */
+    font-size: 13px; /* Slightly smaller font */
   }
-    
-  /* Hide user avatar */
-  .chat_message_wrapper.chat_message_right .chat_user_avatar {
-    display: none;
-  }
-  
-  .chat_message p {
-    margin: 0;  /* Remove unnecessary margins */
-    padding: 0;
-    
-  }
+}
 
-  #send-button {
-    background: none; /* Remove default button background */
-    border: none;
-    padding: 5px;
-    cursor: pointer;
-    transition: transform 0.2s ease-in-out;
-  }
+/* Hide user avatar */
+.chat_message_wrapper.chat_message_right .chat_user_avatar {
+  display: none;
+}
 
-  #send-button:hover {
-    transform: scale(1.1); /* Slight zoom effect on hover */
-  }
+.chat_message p {
+  margin: 0;
+  padding: 0;
+}
 
-  .send-icon {
-    width: 30px;  /* Adjust icon size */
-    height: 30px;
-  }
+/* Send button styling */
+#send-button {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
 
-  .question-toggle {
-     display: flex;
-  justify-content: center; /* Center the button horizontally */
+#send-button:hover {
+  transform: scale(1.1);
+}
+
+.send-icon {
+  width: 30px;
+  height: 30px;
+}
+
+/* Question toggle section */
+.question-toggle {
+  display: flex;
+  justify-content: center;
   align-items: center;
   width: 100%;
-  }
-  
-  .arrow-icon {
-    display: inline-block;
-    font-size: 12px;
-    transition: transform 0.3s ease;
-    margin-left: 5px;
-  }
+}
 
-  .arrow-icon.rotate {
-    transform: rotate(180deg);
-  }
+.arrow-icon {
+  display: inline-block;
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  margin-left: 5px;
+}
 
-  /* Optional: adjust the toggle-questions-btn to better accommodate the arrow */
-  .toggle-questions-btn {
-   display: flex;
+.arrow-icon.rotate {
+  transform: rotate(180deg);
+}
+
+/* Responsive toggle questions button */
+.toggle-questions-btn {
+  display: flex;
   align-items: center;
   justify-content: center;
-  background-color: white; /* Always white */
-  color:rgb(44, 47, 49); /* Blue text color */
-  border: 2px solid white; /* Blue border */
-  border-radius: 5px; /* Square shape */
+  background-color: white;
+  color: rgb(44, 47, 49);
+  border: 2px solid white;
+  border-radius: 5px;
   padding: 10px 16px;
   font-size: 14px;
   cursor: pointer;
   transition: box-shadow 0.3s ease;
-  width: fit-content; /* Adjust width based on text */
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); /* Shadow effect */
-  margin: 0 auto; /* Center the button horizontally */
+  width: fit-content;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+  margin: 0 auto;
+}
+
+@media screen and (max-width: 350px) {
+  .toggle-questions-btn {
+    padding: 8px 12px;
+    font-size: 12px;
   }
-  
-  .toggle-questions-btn:hover {
-    background-color: white; /* Keep white on hover */
-  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3); /* Increase shadow effect */
-  }
-  
-/* Hidden scrolling for recommended questions */
+}
+
+.toggle-questions-btn:hover {
+  background-color: white;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Recommended questions container */
 .recommended-questions {
- display: flex;
-  flex-direction: column; /* Stack items vertically */
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   margin: 10px;
-  max-height: 200px; /* Set a maximum height to enable vertical scrolling */
-  overflow-y: auto; /* Enable vertical scrolling */
+  max-height: 200px;
+  overflow-y: auto;
   padding: 10px;
   background-color: #f1f2f3;
   border-radius: 12px;
   border: 2px solid #007bff;
-  scrollbar-width: thin; 
-  
-  }
-  .recommended-questions::-webkit-scrollbar {
-  width: 8px; /* Width of the scrollbar (instead of height for vertical) */
-  display: block
-  
-  
+  scrollbar-width: thin;
 }
-  .recommended-question {
-  flex-shrink: 0; /* Prevent buttons from shrinking */
+
+.recommended-questions::-webkit-scrollbar {
+  width: 8px;
+  display: block;
+}
+
+.recommended-question {
+  flex-shrink: 0;
 }
 
 .recommended-questions::-webkit-scrollbar-thumb {
-  background: #007bff; /* Blue scrollbar */
+  background: #007bff;
   border-radius: 10px;
 }
 
 .recommended-questions::-webkit-scrollbar-track {
-  background: #ddd; /* Light grey background */
-   border-radius: 10px;
-}
+  background: #ddd;
+  border-radius: 10px;
 }
 
-
-/* For older browsers that might not support the & selector syntax */
-.recommended-questions::-webkit-scrollbar {
-  display: none;
-}
-  
-  /* Updated: Added blue border to recommended question buttons */
-  .recommended-question {
-
-   background-color: white;
+/* Recommended question button styling */
+.recommended-question {
+  background-color: white;
   color: #007bff;
   border: 1px solid #007bff;
   border-radius: 16px;
@@ -585,127 +633,147 @@ class ChatBotComponent extends LitElement {
   cursor: pointer;
   transition: background 0.3s ease;
   text-align: center;
-  width: calc(100% - 20px); 
+  width: calc(100% - 20px);
+}
 
+@media screen and (max-width: 350px) {
+  .recommended-question {
+    font-size: 12px;
+    padding: 6px 10px;
   }
+}
 
-  .recommended-question:hover {
-    background-color: #0056b3;
-    color: white;
-  }
+.recommended-question:hover {
+  background-color: #0056b3;
+  color: white;
+}
 
-  .welcome-section {
-    background: linear-gradient(135deg, #2a27da 0%, #00ccff 100%);
-    color: white;
-    padding: 15px;
-    text-align: center;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-  }
+/* Welcome section styling */
+.welcome-section {
+  background: linear-gradient(135deg, #2a27da 0%, #00ccff 100%);
+  color: white;
+  padding: 15px;
+  text-align: center;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
 
+.welcome-title {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+@media screen and (max-width: 350px) {
   .welcome-title {
-    font-size: 1.5em;
-    font-weight: bold;
-    margin-bottom: 10px;
+    font-size: 1.2em;
   }
+}
 
+.welcome-subtitle {
+  font-size: 1em;
+  opacity: 0.9;
+}
+
+@media screen and (max-width: 350px) {
   .welcome-subtitle {
-    font-size: 1em;
-    opacity: 0.9;
+    font-size: 0.9em;
   }
-  
-  /* New: Added divider style for the "or" text */
-  .question-divider {
-    text-align: center;
-    margin: 10px 0;
-    font-size: 16px;
-    font-weight: bold;
-    color: #666;
-    position: relative;
-  }
-  
-  .question-divider::before,
-  .question-divider::after {
-    content: "";
-    display: inline-block;
-    width: 40%;
-    height: 1px;
-    background-color: #ccc;
-    position: absolute;
-    top: 50%;
-  }
-  
-  .question-divider::before {
-    left: 0;
-  }
-  
-  .question-divider::after {
-    right: 0;
-  }
-  .option-buttons {
-     background-color: white;
-    color: black;
-    border: 2px solid #0074D9;
-    border-radius: 50%;
-    width: 45px;
-    height: 45px;
-    min-width: 45px; /* Ensure buttons don't shrink */
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    flex-shrink: 0; /* Prevent button from shrinking */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    
-  }
-  
+}
 
-  .conversation-options {
-   display: flex;
-  flex-direction: row; /* Changed from column to row */
-  flex-wrap: wrap; /* Allow wrapping to next line if needed */
-  gap: 8px; /* Space between buttons */
+/* Question divider styling */
+.question-divider {
+  text-align: center;
+  margin: 10px 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #666;
+  position: relative;
+}
+
+.question-divider::before,
+.question-divider::after {
+  content: "";
+  display: inline-block;
+  width: 40%;
+  height: 1px;
+  background-color: #ccc;
+  position: absolute;
+  top: 50%;
+}
+
+.question-divider::before {
+  left: 0;
+}
+
+.question-divider::after {
+  right: 0;
+}
+
+/* Option buttons styling */
+.option-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+  justify-content: center;
+}
+
+.option-button {
+  background-color: #f1f2f3;
+  color: #2f2c2c;
+  border: 2px solid #007bff;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+  margin: 5px;
+}
+
+@media screen and (max-width: 350px) {
+  .option-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Conversation options styling */
+.conversation-options {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 8px 0;
   padding: 0 15px;
-  justify-content: center; /* Center the buttons horizontally */
+  justify-content: center;
 }
-  
-  .option-button:hover {
-    background-color: #0056a1;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-        .option-button:active {
-        transform: translateY(0);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      }
 
+.option-button:hover {
+  background-color: #0056b3;
+  color: white;
+}
 
-  .chat-title-container {
+/* Chat title container */
+.chat-title-container {
   display: flex;
   flex-direction: column;
-  align-items: center; /* Centers child elements horizontally */
-  text-align: center; /* Ensures text alignment */
-  width: 100%; /* Prevents shifting */
+  align-items: center;
+  text-align: center;
+  width: 100%;
 }
-
-
 
 .chat-subtitle {
-  font-size: 12px; /* Smaller font for subtitle */
-  color: #ddd; /* Light gray text */
-  margin-top: 2px; /* Space below title */
+  font-size: 12px;
+  color: #ddd;
+  margin-top: 2px;
   font-weight: bold;
-  text-align: center; /* Center text */
-  width: 100%; /* Ensure it takes full width */
+  text-align: center;
+  width: 100%;
 }
 
-
-
+/* Chat minimize button */
 .chat-minimize {
   font-size: 15px;
   font-weight: bold;
@@ -720,22 +788,22 @@ class ChatBotComponent extends LitElement {
   transform: scale(1.1);
 }
 
+/* Chat button styling */
 .chat-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .chat-button:hover {
-    background-color: #0056b3;
+  background-color: #0056b3;
 }
 
-
-/* Add this to your style.css file */
+/* Visualize button styling */
 .visualize-btn {
   display: inline-block;
   background-color: #4a7bfa;
@@ -757,9 +825,66 @@ class ChatBotComponent extends LitElement {
 .visualize-btn:active {
   background-color: #2a4cb0;
   transform: translateY(1px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(234, 226, 226, 0.1);
 }
 
+/* Visualization icon styling */
+.visualization-icon {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  padding: 0;
+  margin-top: 8px;
+  margin-left: auto;
+}
+
+.visualization-icon img {
+  width: 150%;
+  height: 150%;
+  object-fit: contain;
+  background-color: white;
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+
+.visualization-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Inline visualization styling */
+.inline-visualization {
+  position: relative;
+  width: 100%;
+  margin-top: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.inline-viz-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* Location button styling */
 .location-btn {
   background-color: #4a7bfa;
   display: inline-block;
@@ -771,977 +896,1711 @@ class ChatBotComponent extends LitElement {
   text-align: center;
 }
 
-      .dynamic-option-buttons {
-         display: flex;
-        gap: 12px;
-        padding: 5 5px;
-        /* Minimum width to ensure all buttons are visible */
-        min-width: max-content;
-      }
-      
-      .option-button {
-       background-color: white;
-    color: black;
-    border: 2px solid #0074D9;
-    border-radius: 50%;
-    width: 33px;
-    height: 33px;
-    min-width: 33px; /* Ensure buttons don't shrink */
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    flex-shrink: 0; /* Prevent button from shrinking */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      }
-      
-      .option-button:hover {
-        background-color: #0056a1;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      }
-    .option-button:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  }
+/* Message container */
+#message-container {
+  display: flex;
+  flex-direction: column;
+}
 
-      #message-container {
-        display: flex;
-        flex-direction: column;
-      }
+/* Buttons scroll container */
+.buttons-scroll-container::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 30px;
+  background: linear-gradient(to right, transparent, rgba(245, 245, 245, 0.9) 70%);
+  pointer-events: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
 
-       .buttons-scroll-container::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 0;
-        height: 100%;
-        width: 30px;
-        background: linear-gradient(to right, transparent, rgba(245, 245, 245, 0.9) 70%);
-        pointer-events: none;
-        border-top-right-radius: 8px;
-        border-bottom-right-radius: 8px;
-      }
+.buttons-scroll-container {
+  width: 100%;
+  height: 30%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  background-color: transparent;
+  border-radius: 8px;
+}
 
-      .buttons-scroll-container {
-         width: 100%;
-         height: 30%
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 6px 0;
-        /* Hide scrollbar for cleaner look while maintaining functionality */
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-        background-color: transparent;
-        border-radius: 8px;
-      }
-      
-      .buttons-scroll-container::-webkit-scrollbar {
-        display: none; /* Chrome, Safari, Opera */
-      }
+.buttons-scroll-container::-webkit-scrollbar {
+  display: none;
+}
 
-       .buttons-section-wrapper {
-        width: 100%;
-        margin: 15px 0;
-        position: relative;
-      }
+/* Buttons section wrapper */
+.buttons-section-wrapper {
+  width: 100%;
+  margin: 15px 0;
+  position: relative;
+}
 
-      .location-buttons {
-    display: flex;
-    gap: 10px; /* Space between buttons */
-    justify-content: center; /* Center the buttons horizontally */
-    margin-top: 10px; /* Space above the buttons */
-  }
+/* Location buttons styling */
+.location-buttons {
+   display: flex;
+  flex-wrap: nowrap; /* Prevent wrapping */
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+}
 
+.location-btn {
+  min-width: auto; /* Remove any minimum width constraints */
+  flex-shrink: 1; /* Allow buttons to shrink if needed */
+  white-space: nowrap; /* Keep text on one line */
+}
+
+@media screen and (max-width: 350px) {
   .location-btn {
-    background-color: #4a7bfa;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    text-align: center;
-    transition: background-color 0.2s ease;
+flex-direction: row;
   }
+}
 
-  .location-btn:hover {
-    background-color: #3a5fd0;
+.location-btn:hover {
+  background-color: #3a5fd0;
+}
+
+.location-btn:active {
+  background-color: #2a4cb0;
+  transform: translateY(1px);
+}
+
+/* Message editing functionality */
+.chat_message_wrapper.chat_message_right .chat_message {
+  position: relative;
+}
+
+.edit-message-icon {
+  position: absolute;
+  top: 5px;
+  left: -25px;
+  cursor: pointer;
+  color: #888;
+  font-size: 16px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+@media screen and (max-width: 480px) {
+  .edit-message-icon {
+    left: -20px;
+    font-size: 14px;
   }
+}
 
-  .location-btn:active {
-    background-color: #2a4cb0;
-    transform: translateY(1px);
+.edit-message-icon:hover {
+  opacity: 1;
+}
+
+.edit-message-input {
+   display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative; 
+}
+
+.edit-message-input input {
+  flex-grow: 1;
+  padding: 5px 30px 5px 5px; /* Add right padding to make space for the save button */
+  border: none; /* Remove the border */
+  border-radius: 4px;
+  margin-right: 5px;
+  background-color: inherit; /* Inherit parent's background color */
+  color: inherit; /* Inherit parent's text color */
+  width: calc(100% - 40px); /* Adjust width to account for cancel button */
+}
+
+@media screen and (max-width: 350px) {
+  .edit-message-input input {
+    font-size: 12px;
+  }
+}
+
+.edit-save-btn, .edit-cancel-btn {
+  padding: 2px 6px;
+  margin-left: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.edit-save-btn {
+    position: absolute;
+  right: 25px; /* Position it inside the input field, adjust as needed */
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  color:rgb(245, 243, 243);
+  z-index: 2; /* Ensure it's above the input */
+}
+
+.edit-cancel-btn {
+   padding: 2px 6px;
+  margin-left: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: transparent;
+  color:rgb(228, 222, 222);
+}
+
+/* Media query for landscape orientation on mobile */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+.chatbot-popup {
+  max-height: 80vh; /* Instead of fixed height */
+}
+
+.messages {
+  height: clamp(250px, 50vh, 400px); /* Min, preferred, max */
+}
+  
+  .chat-header {
+    padding: 5px;
   }
   
+  .input-area {
+    padding: 3px;
+  }
+}
 
+/* Media queries for very small screens */
+@media screen and (max-width: 280px) {
+  .chat-title {
+    font-size: 14px;
+  }
+  
+  .chat-subtitle {
+    font-size: 9px;
+  }
+  
+  .chat-logo {
+    width: 25px;
+    height: 25px;
+  }
+  
+  .chat-close {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+  }
+  
+  .input-area input {
+    font-size: 12px;
+  }
+  
+  .input-area button {
+    width: 35px;
+    height: 35px;
+  }
+}
 `;
 
-  constructor() {
-    super();
-    this.popupActive = false;
-    this.currentMessageIndex = 0;
-    this.lastCorrectMessageIndex = 0;
-    this.messages = [{ text: conversationTree.message, sender: "bot" }];
-    this.currentOptions = conversationTree.options;
-    this.userInput = "";
-    this.buildingIdentifier = "";
-    this.verticalIdentifier = "";
-    this.floorIdentifier = "";
-    this.acc = false;
-    this.stringInput = false;
-    this.recommendedQuestions = [];
-    this.conversationOptions = [];
-    this.showRecommendedQuestions = false;// New property for conversation options
-  }
-  scrollToBottom() {
-    const messageContainer = this.shadowRoot.getElementById("message-container");
-    if (messageContainer) {
-      messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
-  }
-  // Add this method to toggle recommended questions visibility
-  toggleRecommendedQuestions() {
-    this.showRecommendedQuestions = !this.showRecommendedQuestions;
-    this.requestUpdate();
-  }
-
-
-  togglePopup() {
-    this.popupActive = !this.popupActive;
-    let popup = this.shadowRoot.getElementById("chat-pop");
-    if (this.popupActive) {
-      // this.currentMessageIndex = 0;
+    constructor() {
+      super();
+      this.popupActive = false;
+      this.currentMessageIndex = 0;
+      this.lastCorrectMessageIndex = 0;
+      this.messages = [{ text: conversationTree.message, sender: "bot" }];
       this.currentOptions = conversationTree.options;
       this.userInput = "";
-      popup.classList.add("active");
-      this.populateMessages();
-    } else {
-      popup.classList.remove("active");
-    }
-  }
-
-  handleUserInput(e) {
-    this.userInput = e.target.value;
-  }
-
-  getLevenshteinDistance(a, b) {
-    const distanceMatrix = Array(a.length + 1)
-      .fill(null)
-      .map(() => Array(b.length + 1).fill(null));
-
-    for (let i = 0; i <= a.length; i++) {
-      distanceMatrix[i][0] = i;
-    }
-
-    for (let j = 0; j <= b.length; j++) {
-      distanceMatrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= a.length; i++) {
-      for (let j = 1; j <= b.length; j++) {
-        const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-        distanceMatrix[i][j] = Math.min(
-          distanceMatrix[i - 1][j] + 1,
-          distanceMatrix[i][j - 1] + 1,
-          distanceMatrix[i - 1][j - 1] + indicator
-        );
-      }
-    }
-
-    return distanceMatrix[a.length][b.length];
-  }
-
-  async fetchDataAndAskContinue(
-    buildingIdentifier,
-    verticalIdentifier,
-    floorIdentifier,
-    accumulator = false,
-    nodeIdentifier = false
-  ) {
-    // fetch data from url
-    const latest_data_url = new URL(
-      "https://smartcitylivinglab.iiit.ac.in/verticals/all/latest"
-    );
-    const options = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    this.resetInputAndPopulateMessages();
-
-    // Fetch data from the API
-    let response = await fetch(latest_data_url, options);
-
-    let data = await response.json();
-
-    const data_dict = Object.values(data)
-      .flat()
-      .reduce((acc, element) => {
-        acc[element.node_id] = element;
-        return acc;
-      }, {});
-
-    let filteredNodes = Object.values(data_dict);
-    // Check if vertical
-    if (verticalIdentifier) {
-      // get all with node_id starting with verticalIdentifier or if first 4 letters have verticalIdentifier
-      filteredNodes = Object.values(data_dict).filter(
-        (node) =>
-          node.node_id.startsWith(verticalIdentifier) ||
-          node.node_id.slice(0, 4).includes(verticalIdentifier)
-      );
-    }
-    // Check if building
-    if (buildingIdentifier) {
-      // getall nodes in filtered nodes which have buildingIdentifier in their node_id
-      filteredNodes = filteredNodes.filter((node) =>
-        node.node_id.includes(buildingIdentifier)
-      );
-    }
-    // Check if floor
-    if (floorIdentifier) {
-      // getall nodes in filtered nodes which have floorIdentifier in their node_id
-      filteredNodes = filteredNodes.filter((node) =>
-        node.node_id.includes(floorIdentifier)
-      );
-    }
-
-    // Check nodeIdentifier
-    if (nodeIdentifier) {
-      // get node with node_id equal to nodeIdentifier
-      filteredNodes = filteredNodes.filter(
-        (node) => node.node_id === nodeIdentifier
-      );
-      // If no node found, try to find the closest match using Levenshtein distance
-      if (filteredNodes.length === 0) {
-        let closestMatch = "";
-        let minDistance = Number.MAX_SAFE_INTEGER;
-        for (const node of Object.values(data_dict)) {
-          const distance = this.getLevenshteinDistance(
-            node.node_id,
-            nodeIdentifier
-          );
-          if (distance < minDistance) {
-            minDistance = distance;
-            closestMatch = node.node_id;
-          }
-        }
-        console.log(
-          "Closest match: " + closestMatch + " with distance: " + minDistance
-        );
-        this.addMessage(
-          `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
-          "bot"
-        );
-
-        // Show the data for the closest match
-        filteredNodes = Object.values(data_dict).filter(
-          (node) => node.node_id === closestMatch
-        );
-      }
-    }
-
-    // if 0 nodes found, return No data found
-    if (filteredNodes.length === 0) {
-      let message = "No data found for the identifiers: ";
-      let identifiers = [];
-
-      if (buildingIdentifier) {
-        identifiers.push("Building - " + buildingIdentifier);
-      }
-
-      if (verticalIdentifier) {
-        identifiers.push("Vertical - " + verticalIdentifier);
-      }
-
-      if (floorIdentifier) {
-        identifiers.push("Floor - " + floorIdentifier);
-      }
-
-      if (nodeIdentifier) {
-        identifiers.push("Node - " + nodeIdentifier);
-      }
-
-      message += identifiers.join(", ");
-
-      this.addMessage(message, "bot");
-      return false;
-    }
-
-    if (accumulator) {
-      // Log all the data
-      const processor = new DataProcessor(filteredNodes);
-      const aggregatedData = processor.aggregateData(accumulator);
-      filteredNodes = [aggregatedData];
-      // Except for latitude, longitude, node_id, name, type, xcor and ycor Calculate for all the other keys
-      // Some are numbers and some are strings like "good", "bad", "average" and others are strings like "43 something"
-      // For numbers, calculate the average, for strings like "good", "bad", "average" calculate the most common value and for strings like "43 something" split the string and calculate average of the numbers and then reattach the string
-    }
-
-    // if more than 1 node is found return the first node
-    console.log(filteredNodes);
-    if (filteredNodes.length >= 1) {
-      let responseMessage = "";
-      // if accumulator is true, then the data is aggregated
-      if (accumulator) {
-        responseMessage += "Aggregated data with \n";
-        responseMessage += "Accumulator: " + accumulator + "\n";
-      } else {
-        responseMessage += "Data for the identifiers: \n";
-      }
-
-      // Get the first node
-      let node = filteredNodes[0];
-
-      // Initialize the response message
-      responseMessage += `${node["node_id"]}:\n`;
-
-      // Iterate over the properties of the node
-      for (const [key, value] of Object.entries(node)) {
-        responseMessage += key + ": " + value + "\n";
-      }
-
-      this.addMessage(responseMessage, "bot");
-
-      if (filteredNodes.length > 1) {
-        // Create a markdown table for better readability
-        // Add title and identifier names before the table
-        let mkdwnTable = "# Data For the Identifiers:\n";
-        if (buildingIdentifier) {
-          mkdwnTable += "Building: " + buildingIdentifier + "\n";
-        }
-        if (verticalIdentifier) {
-          mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
-        }
-        if (floorIdentifier) {
-          mkdwnTable += "Floor: " + floorIdentifier + "\n";
-        }
-        mkdwnTable += "\n";
-
-        mkdwnTable += "|";
-        for (const key of Object.keys(filteredNodes[0])) {
-          mkdwnTable += key + "|";
-        }
-        mkdwnTable += "\n|";
-        for (const key of Object.keys(filteredNodes[0])) {
-          mkdwnTable += "-|";
-        }
-        mkdwnTable += "\n";
-        for (const node of filteredNodes) {
-          for (const value of Object.values(node)) {
-            mkdwnTable += value + "|";
-          }
-          mkdwnTable += "\n";
-        }
-
-        // Post to stagbin
-        const response = await fetch("https://api.stagb.in/dev/content", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            data: mkdwnTable,
-          }),
-        });
-        console.log(response);
-        const responseJson = await response.json();
-        console.log(responseJson);
-
-        // Add table link to the chat
-        this.addMessage(
-          `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
-          "bot"
-        );
-      }
-      return false;
-    }
-
-    // Fetch data based on identifiers and return true or false
-    return true;
-  }
-
-  handleKeyDown(e) {
-    if (e.key === "Enter") {
-      e.preventDefault(); // Prevent form submission
-      this.sendMessage();
-    }
-  }
-
-  async sendMessage() {
-    const userInputTrimmed = this.userInput.trim();
-
-    // If string input is expected, send the input as is
-    if (this.stringInput) {
+      this.buildingIdentifier = "";
+      this.verticalIdentifier = "";
+      this.floorIdentifier = "";
+      this.acc = false;
       this.stringInput = false;
-      this.addMessage(userInputTrimmed, "user");
+      this.recommendedQuestions = [];
+      this.conversationOptions = [];
+      this.showRecommendedQuestions = false;// New property for conversation options
+      this.editingMessageIndex = -1;
+    this.editedMessage = '';
+    this.currentChart = null;
+    }
+    startEditMessage(index) {
+      // Only allow editing user messages
+      if (this.messages[index].sender === 'user') {
+        this.editingMessageIndex = index;
+        this.editedMessage = this.messages[index].text;
+        this.requestUpdate();
 
-      const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
-      if (lastBotMessage.includes("Please enter your question:")) {
+        setTimeout(() => {
+          const editInput = this.shadowRoot.querySelector('.edit-message-input input');
+          if (editInput) {
+            editInput.focus();
+          }
+        }, 50);
+      }
+    }
+
+    async saveEditedMessage() {
+      if (this.editingMessageIndex !== -1 && this.editedMessage.trim()) {
+        // Store original message
+        const originalMessage = this.messages[this.editingMessageIndex].text;
+        
+        // Update the user message with edited content
+        this.messages[this.editingMessageIndex].text = this.editedMessage.trim();
+        
+        // Find the next message index
+        const responseIndex = this.editingMessageIndex + 1;
+        
+        // Remove all messages after the edited message
+        // This will remove the previous response and any subsequent messages
+        if (responseIndex < this.messages.length) {
+          this.messages.splice(responseIndex);
+        }
+        
+        // Add a new bot response message with loading indicator
+        this.messages.push({
+          sender: 'bot',
+          text: '●'
+        });
+        
+        // Update the UI to show changes
+        this.populateMessages();
+        
+        // Animated dots for loading
+        let dotCount = 0;
+        const loadingInterval = setInterval(() => {
+          dotCount = (dotCount % 3) + 1;
+          const dots = '●'.repeat(dotCount);
+          
+          if (this.messages.length > responseIndex) {
+            this.messages[this.messages.length - 1].text = dots;
+            this.populateMessages();
+          }
+        }, 500);
+        
         try {
-          this.addMessage("Processing your question...", "bot");
-
-          // Check if the user's query is related to temporal data visualization
+          // Send the edited message to get a new response
+          const response = await this.sendMessageToBackend(this.editedMessage.trim());
+          
+          // Clear the loading indicator
+          clearInterval(loadingInterval);
+          
+          // Check if the new response should have visualization components
           const temporalDataKeywords = [
-            // Time periods
             'past', 'last', 'history', 'historical', 'trend', 'over time',
             'yesterday', 'week', 'month', 'year', 'hour', 'day'
           ];
-
-          // Check if query is about temperature or humidity
-          const tempHumidityKeywords = ['temperature', 'humidity'];
-          const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
-          const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
-
-          const response = await this.sendMessageToBackend(userInputTrimmed);
-
-          this.messages.pop(); // Remove processing message
-
-          // If it's a temporal data query, add visualization button
-          if (isTemporalDataQuery) {
-
-            // Add the response without the button
-            this.addMessage(`${response}`, "bot");
-
-            // Open the visualization directly in a popup
-            this.showVisualizationPopup(userInputTrimmed);
-          }
-
-
-          // If it's a temperature or humidity query, add Indoor/Outdoor buttons
-          else if (isTempHumidityQuery) {
-            const indoorButtonId = `indoorButton_${Date.now()}`;
-            const outdoorButtonId = `outdoorButton_${Date.now()}`;
-
-            // Add the response with both buttons
-            this.addMessage(`${response}\n\n<div class="location-buttons">
-              <button id="${indoorButtonId}" class="location-btn">Indoor</button>
-              <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
-            </div>`, "bot");
-
-            // Add event listeners for both buttons
+          
+          const sensorParameterKeywords = [
+            'temperature', 'humidity', 'co2', 'carbon dioxide', 'co', 'carbon monoxide',
+            'pm2.5', 'particulate matter', 'pm10', 'gas', 'tvoc', 'voc', 'air quality',
+            'ph', 'turbidity', 'tds', 'conductivity', 'water flow', 'water level',
+            'voltage', 'current', 'power', 'energy', 'pressure', 'noise'
+          ];
+          
+          const isTemporalDataQuery = temporalDataKeywords.some(keyword => 
+            this.editedMessage.toLowerCase().includes(keyword)
+          );
+          
+          const isSensorParameterQuery = sensorParameterKeywords.some(keyword => 
+            this.editedMessage.toLowerCase().includes(keyword)
+          );
+          
+          // Update the bot response with the new response
+          // If the query qualifies for visualization, add the icon
+          if (isTemporalDataQuery && isSensorParameterQuery) {
+            const iconId = `visualizeIcon_${Date.now()}`;
+            const queryToUse = this.editedMessage.trim(); // Store the actual query to use
+            
+            this.messages[this.messages.length - 1].text = `${response}\n\n<div id="${iconId}" class="visualization-icon" data-query="${encodeURIComponent(queryToUse)}">
+                <img src="/static/images/bar1.png" alt="Visualize" />
+              </div>`;
+                
+            // Add event listener for visualization icon after the message is rendered
             setTimeout(() => {
-              const indoorButton = this.shadowRoot.getElementById(indoorButtonId);
-              const outdoorButton = this.shadowRoot.getElementById(outdoorButtonId);
-
-              if (indoorButton) {
-                indoorButton.addEventListener("click", async () => {
-                  console.log("Indoor button clicked!");
-                  const indoorResponse = await this.sendMessageToBackend(`${userInputTrimmed} indoor`);
-                  this.addMessage(`Indoor ${userInputTrimmed.toLowerCase().includes('temperature') ? 'Temperature' : 'Humidity'} Data:\n${indoorResponse}`, "bot");
-
-                  // Add continue/exit options after response
-                  this.addMessage(
-                    "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-                    "bot"
-                  );
-                  this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-                  this.requestUpdate();
-                });
-              }
-
-              if (outdoorButton) {
-                outdoorButton.addEventListener("click", async () => {
-                  console.log("Outdoor button clicked!");
-                  const outdoorResponse = await this.sendMessageToBackend(`${userInputTrimmed} outdoor`);
-                  this.addMessage(`Outdoor ${userInputTrimmed.toLowerCase().includes('temperature') ? 'Temperature' : 'Humidity'} Data:\n${outdoorResponse}`, "bot");
-
-                  // Add continue/exit options after response
-                  this.addMessage(
-                    "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-                    "bot"
-                  );
-                  this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-                  this.requestUpdate();
+              const icon = this.shadowRoot.getElementById(iconId);
+              if (icon) {
+                // Remove any existing listeners by cloning and replacing the node
+                const newIcon = icon.cloneNode(true);
+                icon.parentNode.replaceChild(newIcon, icon);
+                
+                // Add a fresh event listener with the correct query
+                newIcon.addEventListener("click", () => {
+                  console.log("Visualization icon clicked for query:", queryToUse);
+                  const encodedQuery = encodeURIComponent(queryToUse);
+                  this.openVisualizationModal(encodedQuery);
                 });
               }
             }, 100);
           } else {
-            // Just add the regular response
-            this.addMessage(response, "bot");
-          }
-
-          // Add continue/exit options after response (only for non-temp/humidity queries or temporal queries)
-          if (!isTempHumidityQuery || isTemporalDataQuery) {
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
-
-            this.currentOptions = [
-              { text: "1", next: "AskQuestionNode" },
-              { text: "2", next: "MainMenu" },
-              { text: "3", next: "ExitChatNode" }
-            ];
-
-            this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-            this.recommendedQuestions = [];
-            this.conversationOptions = this.currentOptions;
-            this.requestUpdate();
+            // For other responses, just update the text
+            this.messages[this.messages.length - 1].text = response;
           }
         } catch (error) {
-          console.error("Error processing question:", error);
-          this.messages.pop();
-          this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
-          this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
-          this.currentOptions = conversationTree.nodes.MainMenu.options;
-          this.recommendedQuestions = [];
-          this.conversationOptions = [];
-          this.requestUpdate();
+          clearInterval(loadingInterval);
+          
+          // Show error message if request fails
+          this.messages[this.messages.length - 1].text = "Sorry, I couldn't process your edited question. Please try again.";
+          console.error("Error processing edited message:", error);
         }
-      } else if (lastBotMessage.includes("Would you like to:")) {
-        // Handle continue/exit selection
-        if (userInputTrimmed === "1") {
-          this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
-          this.currentOptions = [];
-          this.stringInput = true;
-          this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
-          this.requestUpdate();
-        } else if (userInputTrimmed === "3") {
-          this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
-          // Reset to main menu after exit
-          setTimeout(() => {
+        
+        // Reset editing state
+        this.editingMessageIndex = -1;
+        this.editedMessage = '';
+        
+        // Update UI
+        this.populateMessages();
+      }
+    }
+
+    cancelEditMessage() {
+      this.editingMessageIndex = -1;
+      this.editedMessage = '';
+      this.requestUpdate();
+    }
+
+    scrollToBottom() {
+      const messageContainer = this.shadowRoot.getElementById("message-container");
+      if (messageContainer) {
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      }
+    }
+    // Add this method to toggle recommended questions visibility
+    toggleRecommendedQuestions() {
+      this.showRecommendedQuestions = !this.showRecommendedQuestions;
+      this.requestUpdate();
+    }
+  
+  
+    togglePopup() {
+      this.popupActive = !this.popupActive;
+      let popup = this.shadowRoot.getElementById("chat-pop");
+      if (this.popupActive) {
+        // this.currentMessageIndex = 0;
+        this.currentOptions = conversationTree.options;
+        this.userInput = "";
+        popup.classList.add("active");
+        this.populateMessages();
+      } else {
+        popup.classList.remove("active");
+      }
+    }
+  
+    handleUserInput(e) {
+      this.userInput = e.target.value;
+    }
+  
+    getLevenshteinDistance(a, b) {
+      const distanceMatrix = Array(a.length + 1)
+        .fill(null)
+        .map(() => Array(b.length + 1).fill(null));
+  
+      for (let i = 0; i <= a.length; i++) {
+        distanceMatrix[i][0] = i;
+      }
+  
+      for (let j = 0; j <= b.length; j++) {
+        distanceMatrix[0][j] = j;
+      }
+  
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+          distanceMatrix[i][j] = Math.min(
+            distanceMatrix[i - 1][j] + 1,
+            distanceMatrix[i][j - 1] + 1,
+            distanceMatrix[i - 1][j - 1] + indicator
+          );
+        }
+      }
+  
+      return distanceMatrix[a.length][b.length];
+    }
+  
+    async fetchDataAndAskContinue(
+      buildingIdentifier,
+      verticalIdentifier,
+      floorIdentifier,
+      accumulator = false,
+      nodeIdentifier = false
+    ) {
+      // fetch data from url
+      const latest_data_url = new URL(
+        "https://smartcitylivinglab.iiit.ac.in/verticals/all/latest"
+      );
+      const options = {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+  
+      this.resetInputAndPopulateMessages();
+  
+      // Fetch data from the API
+      let response = await fetch(latest_data_url, options);
+  
+      let data = await response.json();
+  
+      const data_dict = Object.values(data)
+        .flat()
+        .reduce((acc, element) => {
+          acc[element.node_id] = element;
+          return acc;
+        }, {});
+  
+      let filteredNodes = Object.values(data_dict);
+      // Check if vertical
+      if (verticalIdentifier) {
+        // get all with node_id starting with verticalIdentifier or if first 4 letters have verticalIdentifier
+        filteredNodes = Object.values(data_dict).filter(
+          (node) =>
+            node.node_id.startsWith(verticalIdentifier) ||
+            node.node_id.slice(0, 4).includes(verticalIdentifier)
+        );
+      }
+      // Check if building
+      if (buildingIdentifier) {
+        // getall nodes in filtered nodes which have buildingIdentifier in their node_id
+        filteredNodes = filteredNodes.filter((node) =>
+          node.node_id.includes(buildingIdentifier)
+        );
+      }
+      // Check if floor
+      if (floorIdentifier) {
+        // getall nodes in filtered nodes which have floorIdentifier in their node_id
+        filteredNodes = filteredNodes.filter((node) =>
+          node.node_id.includes(floorIdentifier)
+        );
+      }
+  
+      // Check nodeIdentifier
+      if (nodeIdentifier) {
+        // get node with node_id equal to nodeIdentifier
+        filteredNodes = filteredNodes.filter(
+          (node) => node.node_id === nodeIdentifier
+        );
+        // If no node found, try to find the closest match using Levenshtein distance
+        if (filteredNodes.length === 0) {
+          let closestMatch = "";
+          let minDistance = Number.MAX_SAFE_INTEGER;
+          for (const node of Object.values(data_dict)) {
+            const distance = this.getLevenshteinDistance(
+              node.node_id,
+              nodeIdentifier
+            );
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestMatch = node.node_id;
+            }
+          }
+          console.log(
+            "Closest match: " + closestMatch + " with distance: " + minDistance
+          );
+          this.addMessage(
+            `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
+            "bot"
+          );
+  
+          // Show the data for the closest match
+          filteredNodes = Object.values(data_dict).filter(
+            (node) => node.node_id === closestMatch
+          );
+        }
+      }
+  
+      // if 0 nodes found, return No data found
+      if (filteredNodes.length === 0) {
+        let message = "No data found for the identifiers: ";
+        let identifiers = [];
+  
+        if (buildingIdentifier) {
+          identifiers.push("Building - " + buildingIdentifier);
+        }
+  
+        if (verticalIdentifier) {
+          identifiers.push("Vertical - " + verticalIdentifier);
+        }
+  
+        if (floorIdentifier) {
+          identifiers.push("Floor - " + floorIdentifier);
+        }
+  
+        if (nodeIdentifier) {
+          identifiers.push("Node - " + nodeIdentifier);
+        }
+  
+        message += identifiers.join(", ");
+  
+        this.addMessage(message, "bot");
+        return false;
+      }
+  
+      if (accumulator) {
+        // Log all the data
+        const processor = new DataProcessor(filteredNodes);
+        const aggregatedData = processor.aggregateData(accumulator);
+        filteredNodes = [aggregatedData];
+        // Except for latitude, longitude, node_id, name, type, xcor and ycor Calculate for all the other keys
+        // Some are numbers and some are strings like "good", "bad", "average" and others are strings like "43 something"
+        // For numbers, calculate the average, for strings like "good", "bad", "average" calculate the most common value and for strings like "43 something" split the string and calculate average of the numbers and then reattach the string
+      }
+  
+      // if more than 1 node is found return the first node
+      console.log(filteredNodes);
+      if (filteredNodes.length >= 1) {
+        let responseMessage = "";
+        // if accumulator is true, then the data is aggregated
+        if (accumulator) {
+          responseMessage += "Aggregated data with \n";
+          responseMessage += "Accumulator: " + accumulator + "\n";
+        } else {
+          responseMessage += "Data for the identifiers: \n";
+        }
+  
+        // Get the first node
+        let node = filteredNodes[0];
+  
+        // Initialize the response message
+        responseMessage += `${node["node_id"]}:\n`;
+  
+        // Iterate over the properties of the node
+        for (const [key, value] of Object.entries(node)) {
+          responseMessage += key + ": " + value + "\n";
+        }
+  
+        this.addMessage(responseMessage, "bot");
+  
+        if (filteredNodes.length > 1) {
+          // Create a markdown table for better readability
+          // Add title and identifier names before the table
+          let mkdwnTable = "# Data For the Identifiers:\n";
+          if (buildingIdentifier) {
+            mkdwnTable += "Building: " + buildingIdentifier + "\n";
+          }
+          if (verticalIdentifier) {
+            mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
+          }
+          if (floorIdentifier) {
+            mkdwnTable += "Floor: " + floorIdentifier + "\n";
+          }
+          mkdwnTable += "\n";
+  
+          mkdwnTable += "|";
+          for (const key of Object.keys(filteredNodes[0])) {
+            mkdwnTable += key + "|";
+          }
+          mkdwnTable += "\n|";
+          for (const key of Object.keys(filteredNodes[0])) {
+            mkdwnTable += "-|";
+          }
+          mkdwnTable += "\n";
+          for (const node of filteredNodes) {
+            for (const value of Object.values(node)) {
+              mkdwnTable += value + "|";
+            }
+            mkdwnTable += "\n";
+          }
+  
+          // Post to stagbin
+          const response = await fetch("https://api.stagb.in/dev/content", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              data: mkdwnTable,
+            }),
+          });
+          console.log(response);
+          const responseJson = await response.json();
+          console.log(responseJson);
+  
+          // Add table link to the chat
+          this.addMessage(
+            `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
+            "bot"
+          );
+        }
+        return false;
+      }
+  
+      // Fetch data based on identifiers and return true or false
+      return true;
+    }
+  
+    handleKeyDown(e) {
+      if (e.key === "Enter") {
+        e.preventDefault(); // Prevent form submission
+        this.sendMessage();
+      }
+    }
+
+    async sendMessage() {
+      const userInputTrimmed = this.userInput.trim();
+      if (!userInputTrimmed) {
+        return;
+      }
+      let loadingInterval;
+    
+      if (this.stringInput) {
+        this.stringInput = false;
+        this.addMessage(userInputTrimmed, "user");
+    
+        const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
+        if (lastBotMessage.includes("Please enter your question:")) {
+          let dotCount = 0;
+          loadingInterval = setInterval(() => {
+            dotCount = (dotCount % 3) + 1;
+            const dots = '●'.repeat(dotCount);
+    
+            if (this.messages[this.messages.length - 1].sender === 'bot' &&
+              this.messages[this.messages.length - 1].text.startsWith('●')) {
+                this.messages.pop();
+            }
+    
+            this.addMessage(dots, "bot");
+          }, 500);
+    
+          try {
+            const temporalDataKeywords = [
+              'past', 'last', 'history', 'historical', 'trend', 'over time',
+              'yesterday', 'week', 'month', 'year', 'hour', 'day'
+            ];
+    
+            const tempHumidityKeywords = ['temperature', 'humidity'];
+            const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
+            const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
+    
+            const response = await this.sendMessageToBackend(userInputTrimmed);
+    
+            let responseData;
+            try {
+              responseData = typeof response === 'string' ? JSON.parse(response) : response;
+            } catch (parseError) {
+              responseData = {
+                response: response || "I received a response, but it couldn't be parsed.",
+                is_temporal: false
+              };
+            }
+    
+            // ADDED: Explicit location extraction from input
+            const extractedLocation = this.extractLocation(userInputTrimmed);
+            console.log('Extracted Location:', extractedLocation);
+    
+            if (loadingInterval) {
+              clearInterval(loadingInterval);
+            }
+    
+            if (this.messages[this.messages.length - 1].text.startsWith('●')) {
+              this.messages.pop();
+            }
+    
+            // MODIFIED: Use extracted location for validation
+            const isLocationValid = 
+              extractedLocation && 
+              ['Kohli Block', 'Vindhya'].some(
+                location => extractedLocation.toLowerCase() === location.toLowerCase()
+              );
+
+
+              if (isTemporalDataQuery && isTempHumidityQuery) {
+                const iconId = `visualizeIcon_${Date.now()}`;
+    
+                this.addMessage(`${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
+                    <img src="/static/images/bar1.png" alt="Visualize" />
+                  </div>`, "bot");
+    
+                setTimeout(() => {
+                  const icon = this.shadowRoot.getElementById(iconId);
+                  if (icon) {
+                    icon.addEventListener("click", () => {
+                      console.log("Visualization icon clicked!");
+                      const encodedQuery = encodeURIComponent(userInputTrimmed);
+                      this.openVisualizationModal(encodedQuery);
+                    });
+                  }
+                }, 100);
+    
+                this.addMessage(
+                  "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
+                  "bot"
+                );
+                this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
+                this.recommendedQuestions = [];
+                this.conversationOptions = this.currentOptions;
+                this.requestUpdate();
+              }
+    
+            else if (isTempHumidityQuery && isLocationValid) {
+              const indoorButtonId = `indoorButton_${Date.now()}`;
+              const outdoorButtonId = `outdoorButton_${Date.now()}`;
+    
+              this.addMessage(`${responseData.response}\n\n<div class="location-buttons">
+                  <button id="${indoorButtonId}" class="location-btn">Indoor</button>
+                  <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
+                </div>`, "bot");
+    
+              setTimeout(() => {
+                const indoorButton = this.shadowRoot.getElementById(indoorButtonId);
+                const outdoorButton = this.shadowRoot.getElementById(outdoorButtonId);
+    
+                if (indoorButton) {
+                  indoorButton.addEventListener('click', () => this.handleLocationButton('Indoor'));
+                }
+                if (outdoorButton) {
+                  outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
+                }
+              }, 100);
+            } else {
+              this.addMessage(responseData.response, "bot");
+    
+              this.addMessage(
+                "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
+                "bot"
+              );
+    
+              this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
+              this.recommendedQuestions = [];
+              this.conversationOptions = this.currentOptions;
+              this.requestUpdate();
+            }
+          } catch (error) {
+            if (loadingInterval) {
+              clearInterval(loadingInterval);
+            }
+    
+            console.error("Error processing question:", error);
+            this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
             this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
             this.currentOptions = conversationTree.nodes.MainMenu.options;
             this.recommendedQuestions = [];
             this.conversationOptions = [];
             this.requestUpdate();
-          }, 1000);
-        }
-      } else {
-        // Other existing logic remains the same
-        let continueConversation = await this.fetchDataAndAskContinue(
-          false,
-          false,
-          false,
-          false,
-          userInputTrimmed
-        );
-        if (!continueConversation) {
-          this.addMessage(
-            "Would you like to:\n1. Ask Another Question\n2. Exit Chat",
-            "bot"
-          );
-          this.currentOptions = [
-            { text: "1", next: "AskQuestionNode" },
-            { text: "2", next: "ExitChatNode" }
-          ];
-          this.recommendedQuestions = [];
-          this.conversationOptions = this.currentOptions;
-          this.requestUpdate();
-        }
-        this.buildingIdentifier = "";
-        this.verticalIdentifier = "";
-        this.floorIdentifier = "";
-      }
-
-      this.resetInputAndPopulateMessages();
-      return;
-    }
-
-    // Rest of the existing sendMessage function remains unchanged
-    const selectedOption = this.currentOptions.find(
-      (option) => option.text === userInputTrimmed
-    );
-    let nextNodeKey = "";
-    let responseMessage = "";
-    let error = false;
-
-    this.addMessage(userInputTrimmed, "user");
-
-    if (selectedOption) {
-      nextNodeKey = selectedOption.next;
-
-      let lastBotMessage = this.messages[this.messages.length - 2].text;
-      console.log("Last bot message: " + lastBotMessage);
-      console.log(selectedOption);
-      if (selectedOption.identifier) {
-        console.log("Selected option identifier: " + selectedOption.identifier);
-        if (lastBotMessage.includes("Which building data do you need?")) {
-          this.buildingIdentifier = selectedOption.identifier;
-        } else if (
-          lastBotMessage.includes("Please select a floor by entering")
-        ) {
-          this.floorIdentifier = selectedOption.identifier;
-        } else if (lastBotMessage.includes("Please select a vertical")) {
-          this.verticalIdentifier = selectedOption.identifier;
-        }
-      }
-
-      if (selectedOption.accumulator) {
-        this.acc = selectedOption.accumulator;
-      }
-
-      if (selectedOption.textInput) {
-        this.stringInput = true;
-      }
-
-      console.log(
-        "Identifiers: Building - " +
-        this.buildingIdentifier +
-        ", Vertical - " +
-        this.verticalIdentifier +
-        ", Floor - " +
-        this.floorIdentifier
-      );
-
-      if (selectedOption.terminate) {
-        let continueConversation = await this.fetchDataAndAskContinue(
-          this.buildingIdentifier,
-          this.verticalIdentifier,
-          this.floorIdentifier,
-          this.acc
-        );
-        if (!continueConversation) {
-          this.addMessage(
-            "Thank you for using the chatbot. Have a great day!",
-            "bot"
-          );
-          this.currentOptions = [];
-          this.conversationOptions = []; // Clear conversation options
-          this.requestUpdate();
-        }
-
-        this.buildingIdentifier = "";
-        this.verticalIdentifier = "";
-        this.floorIdentifier = "";
-      }
-
-      const nextNode = conversationTree.nodes[nextNodeKey];
-      if (nextNode) {
-        responseMessage = nextNode.message;
-        this.currentOptions = nextNode.options || [];
-
-        // New logic for handling recommended questions
-        if (nextNodeKey === "AskQuestionNode") {
-          this.stringInput = true;
-          this.recommendedQuestions = nextNode.recommendedQuestions || [];
-          this.conversationOptions = this.currentOptions; // Preserve conversation options
-          this.requestUpdate();
+          }
+        } else if (lastBotMessage.includes("Would you like to:")) {
+          // Handle continue/exit selection
+          if (userInputTrimmed === "1") {
+            this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
+            this.currentOptions = [];
+            this.stringInput = true;
+            this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
+            this.requestUpdate();
+          } else if (userInputTrimmed === "3") {
+            this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
+            // Reset to main menu after exit
+            setTimeout(() => {
+              this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
+              this.currentOptions = conversationTree.nodes.MainMenu.options;
+              this.recommendedQuestions = [];
+              this.conversationOptions = [];
+              this.requestUpdate();
+            }, 1000);
+          }
         } else {
-          this.recommendedQuestions = [];
-          this.conversationOptions = this.currentOptions; // Preserve conversation options
+          // Other existing logic remains the same
+          let continueConversation = await this.fetchDataAndAskContinue(
+            false,
+            false,
+            false,
+            false,
+            userInputTrimmed
+          );
+          if (!continueConversation) {
+            this.addMessage(
+              "Would you like to:\n1. Ask Another Question\n2. Exit Chat",
+              "bot"
+            );
+            this.currentOptions = [
+              { text: "1", next: "AskQuestionNode" },
+              { text: "2", next: "ExitChatNode" }
+            ];
+            this.recommendedQuestions = [];
+            this.conversationOptions = this.currentOptions;
+            this.requestUpdate();
+          }
+          this.buildingIdentifier = "";
+          this.verticalIdentifier = "";
+          this.floorIdentifier = "";
         }
-
-        this.currentMessageIndex++;
-        this.lastCorrectMessageIndex = this.currentMessageIndex;
+  
+        this.resetInputAndPopulateMessages();
+        return;
+      }
+      // Rest of the existing sendMessage function remains unchanged
+      const selectedOption = this.currentOptions.find(
+        (option) => option.text === userInputTrimmed
+      );
+      let nextNodeKey = "";
+      let responseMessage = "";
+      let error = false;
+  
+      this.addMessage(userInputTrimmed, "user");
+  
+      if (selectedOption) {
+        nextNodeKey = selectedOption.next;
+  
+        let lastBotMessage = this.messages[this.messages.length - 2].text;
+        console.log("Last bot message: " + lastBotMessage);
+        console.log(selectedOption);
+        if (selectedOption.identifier) {
+          console.log("Selected option identifier: " + selectedOption.identifier);
+          if (lastBotMessage.includes("Which building data do you need?")) {
+            this.buildingIdentifier = selectedOption.identifier;
+          } else if (
+            lastBotMessage.includes("Please select a floor by entering")
+          ) {
+            this.floorIdentifier = selectedOption.identifier;
+          } else if (lastBotMessage.includes("Please select a vertical")) {
+            this.verticalIdentifier = selectedOption.identifier;
+          }
+        }
+  
+        if (selectedOption.accumulator) {
+          this.acc = selectedOption.accumulator;
+        }
+  
+        if (selectedOption.textInput) {
+          this.stringInput = true;
+        }
+  
+        console.log(
+          "Identifiers: Building - " +
+          this.buildingIdentifier +
+          ", Vertical - " +
+          this.verticalIdentifier +
+          ", Floor - " +
+          this.floorIdentifier
+        );
+  
+        if (selectedOption.terminate) {
+          let continueConversation = await this.fetchDataAndAskContinue(
+            this.buildingIdentifier,
+            this.verticalIdentifier,
+            this.floorIdentifier,
+            this.acc
+          );
+          if (!continueConversation) {
+            this.addMessage(
+              "Thank you for using the chatbot. Have a great day!",
+              "bot"
+            );
+            this.currentOptions = [
+              { text: "1", next: "BuildingNode" },
+              { text: "2", next: "VerticalNode" },
+              { text: "3", next: "NodeSpecificFinalNode", textInput: true },
+              { text: "4", next: "ConversationalModeOptions" }
+            ];
+          }
+  
+          this.buildingIdentifier = "";
+          this.verticalIdentifier = "";
+          this.floorIdentifier = "";
+        }
+  
+        const nextNode = conversationTree.nodes[nextNodeKey];
+        if (nextNode) {
+          responseMessage = nextNode.message;
+          this.currentOptions = nextNode.options || [];
+  
+          // New logic for handling recommended questions
+          if (nextNodeKey === "AskQuestionNode") {
+            this.stringInput = true;
+            this.recommendedQuestions = nextNode.recommendedQuestions || [];
+            this.conversationOptions = this.currentOptions; // Preserve conversation options
+            this.requestUpdate();
+          } else {
+            this.recommendedQuestions = [];
+            this.conversationOptions = this.currentOptions; // Preserve conversation options
+          }
+  
+          this.currentMessageIndex++;
+          this.lastCorrectMessageIndex = this.currentMessageIndex;
+        } else {
+          responseMessage = "Error: Invalid next node";
+          error = true;
+        }
       } else {
-        responseMessage = "Error: Invalid next node";
+        responseMessage = "Error: Invalid option selected";
         error = true;
       }
-    } else {
-      responseMessage = "Error: Invalid option selected";
-      error = true;
+  
+      this.addMessage(responseMessage, "bot");
+  
+      if (error) {
+        const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
+        this.addMessage(lastCorrectMessage.text, "bot");
+        error = false;
+      }
+  
+      this.resetInputAndPopulateMessages();
     }
 
-    this.addMessage(responseMessage, "bot");
 
-    if (error) {
-      const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
-      this.addMessage(lastCorrectMessage.text, "bot");
-      error = false;
+    extractLocation(input) {
+      const knownLocations = ['Kohli Block', 'Vindhya'];
+      const lowercaseInput = input.toLowerCase();
+      
+      const matchedLocation = knownLocations.find(location => 
+        lowercaseInput.includes(location.toLowerCase())
+      );
+  
+      return matchedLocation;
     }
+  
+  
+    async handleLocationButton(location) {
+      // Send a follow-up query to get location-specific information
+      try {
+        const locationQuery = `${this.messages[this.messages.length - 2].text} ${location} temperature`;
 
-    this.resetInputAndPopulateMessages();
+        const lastMessage = this.messages[this.messages.length - 1];
+        if (lastMessage.text.includes('<div class="location-buttons">')) {
+          // Modify the last message to remove the buttons
+          lastMessage.text = lastMessage.text.replace(
+            /<div class="location-buttons">.*?<\/div>/s, 
+            ''
+          );
+          this.populateMessages(); // Refresh messages to reflect change
+        }
+
+  
+        // Animated dots loading effect
+        let dotCount = 0;
+        const loadingInterval = setInterval(() => {
+          dotCount = (dotCount % 3) + 1;
+          const dots = '●'.repeat(dotCount);
+  
+          // Remove previous loading message if exists
+          if (this.messages[this.messages.length - 1].sender === 'bot' &&
+            this.messages[this.messages.length - 1].text.startsWith('●')) {
+            this.messages.pop();
+          }
+  
+          this.addMessage(dots, "bot");
+        }, 500);
+  
+        const response = await this.sendMessageToBackend(locationQuery);
+  
+        // Stop the loading interval
+        clearInterval(loadingInterval);
+  
+        // Remove the last loading message
+        this.messages.pop();
+  
+        // Add the location-specific response
+        this.addMessage(response, "bot");
+  
+        // Provide continuation options
+        this.addMessage(
+          "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
+          "bot"
+        );
+        this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
+        this.recommendedQuestions = [];
+        this.conversationOptions = this.currentOptions;
+        this.requestUpdate();
+  
+      } catch (error) {
+        console.error("Error processing location-specific query:", error);
+        this.addMessage("Sorry, I couldn't process your location-specific query. Please try again.", "bot");
+        this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
+        this.currentOptions = conversationTree.nodes.MainMenu.options;
+        this.recommendedQuestions = [];
+        this.conversationOptions = [];
+        this.requestUpdate();
+      }
+    }
+    
+  
+  
+    async openVisualizationModal(query) {
+
+
+    const existingModal = this.shadowRoot.getElementById('visualization-modal');
+  if (existingModal) {
+    if (this.currentChart) {
+      this.currentChart.destroy();
+      this.currentChart = null;
+    }
+    this.shadowRoot.removeChild(existingModal);
   }
-
-  showVisualizationPopup(query) {
-    // Create popup container if it doesn't exist
-    let popupOverlay = document.getElementById('visualizationPopup');
-
-    if (!popupOverlay) {
-      // Create popup elements
-      popupOverlay = document.createElement('div');
-      popupOverlay.id = 'visualizationPopup';
-      popupOverlay.className = 'popup-overlay';
-
-      const popupContainer = document.createElement('div');
-      popupContainer.className = 'popup-container';
-
-      const popupHeader = document.createElement('div');
-      popupHeader.className = 'popup-header';
-      popupHeader.textContent = 'Data Visualization';
-
-      const closeButton = document.createElement('button');
-      closeButton.className = 'close-btn';
-      closeButton.innerHTML = '&times;';
-      closeButton.onclick = () => {
-        popupOverlay.style.display = 'none';
+      // Parameter keywords for identifying different types of parameters
+      const parameterKeywords = {
+        // Temperature parameters
+        'temperature': ['temperature', 'temp', 'ambient temperature', 'celsius', 'fahrenheit'],
+  
+        // Humidity parameters
+        'humidity': ['humidity', 'relative humidity', 'moisture'],
+  
+        // Air quality parameters
+        'co2': ['co2', 'carbon dioxide'],
+        'co': ['co', 'carbon monoxide'],
+        'pm2.5': ['pm2.5', 'particulate matter', 'fine particles'],
+        'pm10': ['pm10', 'coarse particles'],
+        'gas': ['gas', 'tvoc', 'voc'],
+        'air quality': ['aqi', 'air quality', 'air quality index'],
+  
+        // Water parameters
+        'ph': ['ph', 'acidity'],
+        'turbidity': ['turbidity', 'clarity', 'water clarity'],
+        'tds': ['tds', 'total dissolved solids'],
+        'conductivity': ['conductivity', 'water conductivity'],
+        'water flow': ['flow', 'water flow', 'flow rate'],
+        'water level': ['water level', 'level'],
+  
+        // Energy parameters
+        'voltage': ['voltage', 'volts'],
+        'current': ['current', 'ampere', 'amp'],
+        'power': ['power', 'watt', 'kw', 'kilowatt'],
+        'energy': ['energy', 'kwh', 'kilowatt hour'],
+  
+        // Pressure parameters
+        'pressure': ['pressure', 'barometric pressure', 'atmospheric pressure'],
+  
+        // Noise parameters
+        'noise': ['noise', 'sound', 'decibel', 'db']
       };
-
-      const popupContent = document.createElement('div');
-      popupContent.className = 'popup-content';
-
-      // Create iframe to load the visualization
-      const iframe = document.createElement('iframe');
-      iframe.id = 'visualizationFrame';
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
-      iframe.style.border = 'none';
-
-      // Assemble the popup
-      popupHeader.appendChild(closeButton);
-      popupContent.appendChild(iframe);
-      popupContainer.appendChild(popupHeader);
-      popupContainer.appendChild(popupContent);
-      popupOverlay.appendChild(popupContainer);
-
-      // Add popup styles
-      const style = document.createElement('style');
-      style.textContent = `
-        .popup-overlay {
-          display: none;
+  
+      // Function to extract parameter from query
+      const extractParameterFromQuery = (query) => {
+        query = query.toLowerCase();
+  
+        // Check each parameter keyword
+        for (const paramType in parameterKeywords) {
+          for (const keyword of parameterKeywords[paramType]) {
+            if (query.includes(keyword)) {
+              return paramType;
+            }
+          }
+        }
+  
+        return null;
+      };
+  
+      // Function to find matching parameter in data
+      const findMatchingParameter = (paramType, availableParams) => {
+        paramType = paramType.toLowerCase();
+  
+        // First check for exact match
+        for (const param of availableParams) {
+          if (param.toLowerCase() === paramType) {
+            return param;
+          }
+        }
+  
+        // Then check for keyword matches
+        if (parameterKeywords[paramType]) {
+          for (const keyword of parameterKeywords[paramType]) {
+            for (const param of availableParams) {
+              if (param.toLowerCase().includes(keyword)) {
+                return param;
+              }
+            }
+          }
+        }
+  
+        // Check if any available param contains the paramType
+        for (const param of availableParams) {
+          if (param.toLowerCase().includes(paramType)) {
+            return param;
+          }
+        }
+  
+        return null;
+      };
+  
+      // Create modal container
+      const modal = document.createElement('div');
+      modal.id = 'visualization-modal';
+      modal.innerHTML = `
+        <style>
+          #visualization-modal {
           position: fixed;
           top: 0;
           left: 0;
           width: 100%;
           height: 100%;
-          background-color: rgba(0, 0, 0, 0.6);
-          z-index: 1000;
+          background-color: rgba(0, 0, 0, 0.4);
+          display: flex;
           justify-content: center;
           align-items: center;
-          animation: fadeIn 0.3s ease-in-out;
+          z-index: 1000;
+          opacity: 0;
+          transition: opacity 0.3s ease-in-out;
         }
-        
-        .popup-container {
+        #visualization-modal.show {
+          opacity: 1;
+        }
+        #visualization-content {
           background-color: white;
-          border-radius: 8px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-          width: 30%;          /* Reduced from 90% */
-          max-width: 500px;    /* Reduced from 1200px */
-          max-height: 50vh;    /* Reduced from 90vh */
+          width: 70%;
+          max-width: 800px;
+          max-height: 70vh;
+          border-radius: 12px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
           display: flex;
           flex-direction: column;
+          position: relative;
           overflow: hidden;
-          transform: translateY(-30px);
-          animation: slideIn 0.3s ease-in-out forwards;
-          position: fixed;
-          right: 20px;         /* Position in right corner */
-          bottom: 120px;        /* Position in bottom corner */ //from 40px 
-          margin: 0;           /* Reset any margins */
+          transform: scale(0.9);
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        
-        .popup-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 10px 15px;  /* Reduced padding */
-          background-color: #f5f7fa;
-          border-bottom: 1px solid #e2e8f0;
-          font-weight: bold;
-          font-size: 16px;     /* Smaller font */
+        #visualization-modal.show #visualization-content {
+          transform: scale(1);
         }
-        
-        .close-btn {
-          cursor: pointer;
-          font-size: 20px;     /* Smaller close button */
-          color: #718096;
+        #visualization-close {
+          position: absolute;
+          top: 15px;
+          right: 15px;
           background: none;
           border: none;
-          padding: 0;
-          width: 25px;         /* Smaller size */
-          height: 25px;
+          font-size: 24px;
+          cursor: pointer;
+          color: #6b7280;
+          transition: color 0.2s ease;
+        }
+        #visualization-close:hover {
+          color: #3b82f6;
+        }
+        #visualization-header {
+          padding: 15px 20px;
+          background-color: #f9fafb;
+          border-bottom: 1px solid #e5e7eb;
           display: flex;
+          justify-content: space-between;
           align-items: center;
+        }
+        #visualization-header h3 {
+          margin: 0;
+          font-size: 1.1rem;
+          color: #374151;
+          font-weight: 600;
+        }
+        #visualization-chart-container {
+          padding: 15px;
+          flex-grow: 1;
+          display: flex;
           justify-content: center;
+          align-items: center;
+        }
+        #visualization-chart {
+          width: 100%;
+          max-height: 400px;
+        }
+        #loading-spinner {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100%;
+        }
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e5e7eb;
+          border-top: 4px solid #3b82f6;
           border-radius: 50%;
-          transition: background-color 0.2s ease-in-out;
+          animation: spin 1s linear infinite;
         }
-        
-        .close-btn:hover {
-          background-color: #e2e8f0;
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
-        
-        .popup-content {
-          padding: 0;
-          overflow: hidden;
-          height: 200px;       /* Fixed height instead of 80vh */
+        #error-message {
+          color: #ef4444;
+          text-align: center;
+          padding: 20px;
+          background-color: #fef2f2;
         }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slideIn {
-          from { transform: translateY(-30px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        
-        /* Media query for smaller screens */
-        @media (max-width: 768px) {
-          .popup-container {
-            width: 85%;
-            max-width: none;
-            bottom: 10px;
-            right: 10px;
-            left: 10px;
-            max-height: 60vh;
-          }
-          
-          .popup-content {
-            height: 300px;
-          }
-        }
+        </style>
+        <div id="visualization-content">
+          <div id="visualization-header">
+            <h3>Data Visualization</h3>
+            <button id="visualization-close">&times;</button>
+          </div>
+          <div id="loading-spinner" style="display: flex;">
+            <div class="spinner"></div>
+          </div>
+          <canvas id="visualization-chart" style="display: none;"></canvas>
+          <div id="error-message" style="display: none; color: red; text-align: center;"></div>
+        </div>
       `;
-
-      document.head.appendChild(style);
-      document.body.appendChild(popupOverlay);
-    }
-
-    // Update the iframe source with the encoded query
-    const iframe = document.getElementById('visualizationFrame');
-    const encodedQuery = encodeURIComponent(query);
-    iframe.src = `../templates/sample.html?query=${encodedQuery}`;
-
-    // Show the popup
-    popupOverlay.style.display = 'flex';
-
-    // Handle closing when clicking outside the popup
-    popupOverlay.onclick = (event) => {
-      if (event.target === popupOverlay) {
-        popupOverlay.style.display = 'none';
-      }
-    };
-  }
-
-
-
-
-
-  // Modified handleRecommendedQuestion method
-  handleRecommendedQuestion(question) {
-    this.userInput = question;
-    this.recommendedQuestions = []; // Clear recommended questions
-    this.conversationOptions = []; // Clear conversation options
-    this.sendMessage();
-  }
-
-  handleConversationOption(option) {
-    this.userInput = option;
-    this.conversationOptions = []; // Clear conversation options
-    this.sendMessage();
-  }
-  async sendMessageToBackend(message) {
-    try {
-      const response = await fetch("http://localhost:8001/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify({ query: message })
+  
+      // Append to shadow root
+      this.shadowRoot.appendChild(modal);
+      requestAnimationFrame(() => {
+        modal.classList.add('show');
       });
-      if (response.headers.get("content-type")?.includes("application/json")) {
+  
+      // Add close event listeners
+      const closeButton = this.shadowRoot.getElementById('visualization-close');
+      const modalContainer = this.shadowRoot.getElementById('visualization-modal');
+      const chartCanvas = this.shadowRoot.getElementById('visualization-chart');
+      const loadingSpinner = this.shadowRoot.getElementById('loading-spinner');
+      const errorMessage = this.shadowRoot.getElementById('error-message');
+  
+      closeButton.addEventListener('click', () => {
+        this.shadowRoot.removeChild(modal);
+      });
+  
+      // Close modal if clicked outside content
+      modalContainer.addEventListener('click', (event) => {
+        if (event.target === modalContainer) {
+          this.shadowRoot.removeChild(modal);
+        }
+      });
+
+      closeButton.addEventListener('click', () => {
+        // Destroy chart before removing modal
+        if (this.currentChart) {
+          this.currentChart.destroy();
+          this.currentChart = null;
+        }
+        this.shadowRoot.removeChild(modal);
+      });
+    
+      // Close modal if clicked outside content
+      modalContainer.addEventListener('click', (event) => {
+        if (event.target === modalContainer) {
+          // Destroy chart before removing modal
+          if (this.currentChart) {
+            this.currentChart.destroy();
+            this.currentChart = null;
+          }
+          this.shadowRoot.removeChild(modal);
+        }
+      });
+  
+      try {
+        // Decode and get the original query
+        const decodedQuery = decodeURIComponent(query);
+  
+        // Fetch data from the backend
+        const response = await fetch("http://localhost:8001/debug", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ query: decodedQuery })
+        });
+  
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+  
+        const data = await response.json();
+  
+        // Determine if it's a temporal query
+        const isTemporal = data.is_temporal || false;
+  
+        // Extract parameter from query
+        const parameterType = extractParameterFromQuery(decodedQuery);
+  
+        // Hide loading spinner
+        loadingSpinner.style.display = 'none';
+        chartCanvas.style.display = 'block';
+  
+        // Render chart using Chart.js
+        const ctx = chartCanvas.getContext('2d');
+  
+        // Prepare chart data and options
+        let chartData, chartOptions, matchedParam;
+  
+        if (isTemporal) {
+          // Temporal data processing
+          const temporalData = this.extractTemporalData(data);
+          const availableParams = Object.keys(temporalData);
+  
+          // Find matching parameter
+          matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
+  
+          if (!matchedParam && availableParams.length > 0) {
+            // If no specific parameter found, use the first available parameter
+            matchedParam = availableParams[0];
+          }
+  
+          if (matchedParam) {
+            const paramData = temporalData[matchedParam];
+  
+            // Create a dataset for each unique node
+            const nodeDatasets = {};
+            paramData.labels.forEach((label, index) => {
+              const nodeId = paramData.nodeIds[index];
+              if (!nodeDatasets[nodeId]) {
+                nodeDatasets[nodeId] = {
+                  label: `Node ${nodeId}`,
+                  data: [],
+                  labels: [],
+                  borderColor: this.getNodeColor(nodeId),
+                  backgroundColor: this.getNodeColor(nodeId, 0.1),
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.2
+                };
+              }
+              nodeDatasets[nodeId].data.push(paramData.values[index]);
+              nodeDatasets[nodeId].labels.push(label);
+            });
+  
+            chartData = {
+              labels: [...new Set(paramData.labels)],
+              datasets: Object.values(nodeDatasets)
+            };
+  
+            chartOptions = {
+              responsive: true,
+              scales: {
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Time'
+                  }
+                },
+                y: {
+                  title: {
+                    display: true,
+                    text: matchedParam
+                  }
+                }
+              }
+            };
+          } else {
+            throw new Error('No suitable parameter found for visualization');
+          }
+        } else {
+          // Current data processing
+          const currentData = this.extractCurrentData(data);
+          const availableParams = Object.keys(currentData);
+  
+          // Find matching parameter
+          matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
+  
+          if (!matchedParam) {
+            throw new Error(`No matching parameter found for "${decodedQuery}"`);
+          }
+  
+          const paramData = currentData[matchedParam];
+  
+          chartData = {
+            labels: paramData.labels,
+            datasets: [{
+              label: matchedParam,
+              data: paramData.values,
+              backgroundColor: 'rgba(74, 123, 250, 0.7)'
+            }]
+          };
+  
+          chartOptions = {
+            responsive: true,
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Nodes'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: matchedParam
+                }
+              }
+            }
+          };
+        }
+  
+        // Render chart
+   
+     if (this.currentChart) {
+  this.currentChart.destroy();
+  this.currentChart = null;
+}
+    
+        // Render chart
+        this.currentChart = new Chart(ctx, {
+          type: isTemporal ? 'line' : 'bar',
+          data: chartData,
+          options: chartOptions
+        });
+  
+      } catch (error) {
+        // Show error message
+        loadingSpinner.style.display = 'none';
+        errorMessage.textContent = `Error: ${error.message}`;
+        errorMessage.style.display = 'block';
+        console.error('Visualization error:', error);
+      }
+    }
+  
+    // Helper method to generate consistent colors for nodes
+    getNodeColor(nodeId, alpha = 1) {
+      // Simple color generation based on nodeId
+      const colors = [
+        `rgba(74, 123, 250, ${alpha})`,
+        `rgba(255, 99, 132, ${alpha})`,
+        `rgba(54, 162, 235, ${alpha})`,
+        `rgba(255, 206, 86, ${alpha})`,
+        `rgba(75, 192, 192, ${alpha})`,
+        `rgba(153, 102, 255, ${alpha})`,
+        `rgba(255, 159, 64, ${alpha})`
+      ];
+  
+      // Use a simple hash to consistently map nodeId to a color
+      const colorIndex = parseInt(nodeId.replace(/\D/g, '')) % colors.length;
+      return colors[colorIndex];
+    }
+  
+    // Modified helper method to extract temporal data
+    extractTemporalData(data) {
+      const temporalData = {};
+      const nodeData = data.node_data;
+  
+      for (const nodeId in nodeData) {
+        const nodeInfo = nodeData[nodeId];
+        if (nodeInfo.filtered_data) {
+          for (const category in nodeInfo.filtered_data) {
+            const categoryData = nodeInfo.filtered_data[category];
+            if (categoryData.data && categoryData.data.length > 0) {
+              const firstDataPoint = categoryData.data[0];
+  
+              for (const param in firstDataPoint) {
+                if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
+                  if (!temporalData[param]) {
+                    temporalData[param] = {
+                      labels: [],
+                      values: [],
+                      nodeIds: []
+                    };
+                  }
+  
+                  categoryData.data.forEach(point => {
+                    temporalData[param].labels.push(
+                      new Date(point.timestamp || point.created_at).toLocaleString()
+                    );
+                    temporalData[param].values.push(parseFloat(point[param]));
+                    temporalData[param].nodeIds.push(nodeId);
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+  
+      return temporalData;
+    }
+  
+    // Helper method to extract current data
+    extractCurrentData(data) {
+      const currentData = {};
+      const nodeData = data.node_data;
+  
+      for (const nodeId in nodeData) {
+        for (const category in nodeData[nodeId]) {
+          const categoryData = nodeData[nodeId][category];
+          if (Array.isArray(categoryData) && categoryData.length > 0) {
+            const firstDataPoint = categoryData[0];
+  
+            for (const param in firstDataPoint) {
+              if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
+                if (!currentData[param]) {
+                  currentData[param] = {
+                    labels: [],
+                    values: []
+                  };
+                }
+  
+                categoryData.forEach(point => {
+                  currentData[param].labels.push(point.name || nodeId);
+                  currentData[param].values.push(parseFloat(point[param]));
+                });
+              }
+            }
+          }
+        }
+      }
+  
+      return currentData;
+    }
+  
+  
+    // Modified handleRecommendedQuestion method
+    handleRecommendedQuestion(question) {
+      this.userInput = question;
+      this.recommendedQuestions = []; // Clear recommended questions
+      this.conversationOptions = []; // Clear conversation options
+      this.sendMessage();
+    }
+  
+    handleConversationOption(option) {
+      this.userInput = option;
+      this.conversationOptions = []; // Clear conversation options
+      this.sendMessage();
+    }
+    async sendMessageToBackend(message) {
+      try {
+        const response = await fetch("http://localhost:8001/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ query: message })
+        });
         if (response.headers.get("content-type")?.includes("application/json")) {
-          const data = await response.json();
-          return data.response || "Sorry, I couldn't process your question.";
+          if (response.headers.get("content-type")?.includes("application/json")) {
+            const data = await response.json();
+            return data.response || "Sorry, I couldn't process your question.";
+          } else {
+            console.error("Server returned non-JSON response");
+            return "Server returned an unexpected response format. Please try again later.";
+          }
         } else {
           console.error("Server returned non-JSON response");
           return "Server returned an unexpected response format. Please try again later.";
         }
-        return data.response || "Sorry, I couldn't process your question.";
-      } else {
-        console.error("Server returned non-JSON response");
-        return "Server returned an unexpected response format. Please try again later.";
+  
+      } catch (error) {
+        console.error("Error communicating with backend:", error);
+        return "Sorry, I couldn't connect to the backend service. Please try again later.";
       }
-
-      if (!response.ok) {
-        console.error("Server Error:", response.statusText);
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.response || "Sorry, I couldn't process your question.";
-    } catch (error) {
-      console.error("Error communicating with backend:", error);
-      return "Sorry, I couldn't connect to the backend service. Please try again later.";
     }
-  }
+  
+    addMessage(text, sender) {
+  
+  
+      this.messages.push({ text, sender });
+      this.populateMessages(); // Update the UI immediately
+    }
+  
+    resetInputAndPopulateMessages() {
+      this.userInput = ""; // Clear userInput for the next input
+      const inputField = this.shadowRoot.querySelector("input");
+      if (inputField) inputField.value = ""; // Clear input field in the DOM
+      this.populateMessages(); // Update displayed messages
+    }
 
-  addMessage(text, sender) {
 
-
-    this.messages.push({ text, sender });
-    this.populateMessages(); // Update the UI immediately
-  }
-
-  resetInputAndPopulateMessages() {
-    this.userInput = ""; // Clear userInput for the next input
-    const inputField = this.shadowRoot.querySelector("input");
-    if (inputField) inputField.value = ""; // Clear input field in the DOM
-    this.populateMessages(); // Update displayed messages
-  }
-
-  // Updated populateMessages method to implement the new styling
-  populateMessages() {
-    const messageContainer = this.shadowRoot.getElementById("message-container");
-    messageContainer.innerHTML = "";
-
-    this.messages.forEach((msg) => {
-      const messageWrapper = document.createElement("div");
-      messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
-
-      // Only add avatar for bot messages
-      if (msg.sender === "bot") {
-        const avatarContainer = document.createElement("div");
-        avatarContainer.className = "chat_user_avatar";
-        avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
-        messageWrapper.appendChild(avatarContainer);
-      }
-
-      const messageBubble = document.createElement("div");
-      messageBubble.className = "chat_message";
-
-      const messageContent = document.createElement("div");
-      messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
-
-      messageBubble.appendChild(messageContent);
-      messageWrapper.appendChild(messageBubble);
-
-      messageContainer.appendChild(messageWrapper);
-
-      // Check if this is a bot message with options
-      if (msg.sender === "bot" && this.currentOptions.length > 0) {
-        const lastBotMessageText = msg.text;
-        if (!lastBotMessageText.includes('Please enter your question:') && !lastBotMessageText.includes('Thank you for using the chatbot. Have a great day!')) {
-          const buttonsContainer = document.createElement("div");
-          buttonsContainer.className = "dynamic-option-buttons";
-
-          // Add each option as a button
-          this.currentOptions.forEach(option => {
-            const optionButton = document.createElement("button");
-            optionButton.className = "option-button";
-            optionButton.textContent = option.text;
-
-            // Handle click event
-            optionButton.addEventListener("click", () => {
-              this.handleOptionSelection(option.text);
-            });
-
-            buttonsContainer.appendChild(optionButton);
-          });
-
-          messageContainer.appendChild(buttonsContainer);
+    
+  
+    populateMessages() {
+      const messageContainer = this.shadowRoot.getElementById("message-container");
+      messageContainer.innerHTML = "";
+    
+      this.messages.forEach((msg, index) => {
+        const messageWrapper = document.createElement("div");
+        messageWrapper.className = `chat_message_wrapper ${msg.sender === "bot" ? "" : "chat_message_right"}`;
+    
+        // Only add avatar for bot messages
+        if (msg.sender === "bot") {
+          const avatarContainer = document.createElement("div");
+          avatarContainer.className = "chat_user_avatar";
+          avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
+          messageWrapper.appendChild(avatarContainer);
         }
-      }
-    });
+    
+        const messageBubble = document.createElement("div");
+        messageBubble.className = "chat_message";
+    
+        // Check if this message is currently being edited
+        if (this.editingMessageIndex === index && msg.sender === 'user') {
+          const editInput = document.createElement("div");
+          editInput.className = "edit-message-input";
+          
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = this.editedMessage;
+          input.addEventListener('input', (e) => {
+            this.editedMessage = e.target.value;
+          });
+        
+          const saveButton = document.createElement("button");
+          saveButton.innerHTML = "✓";
+          saveButton.className = "edit-save-btn";
+          saveButton.addEventListener('click', () => this.saveEditedMessage());
+        
+          const cancelButton = document.createElement("button");
+          cancelButton.innerHTML = "✗";
+          cancelButton.className = "edit-cancel-btn";
+          cancelButton.addEventListener('click', () => this.cancelEditMessage());
+        
+          editInput.appendChild(input);
+          // Add save button inside the input
+          editInput.appendChild(saveButton);
+          // Add cancel button outside the input
+          editInput.appendChild(cancelButton);
+          
+          messageBubble.appendChild(editInput);
+        } else {
+          // Check if the message contains visualization icon
+          const hasVisualizationIcon = msg.text.includes('visualization-icon');
+          
+          // Create content container
+          const messageContent = document.createElement("div");
+          
+          if (hasVisualizationIcon) {
+            // For messages with visualization icons, we need to handle them specially
+            // Split the message into text part and icon part
+            const textAndIcon = msg.text.split('<div id="');
+            
+            // Add the text part
+            if (textAndIcon[0]) {
+              const textPart = document.createElement("div");
+              textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
+              messageContent.appendChild(textPart);
+            }
+            
+            // Add the icon part
+            if (textAndIcon.length > 1) {
+              const iconPart = document.createElement("div");
+              iconPart.id = textAndIcon[1].split('"')[0];
+              iconPart.className = "visualization-icon";
+              iconPart.innerHTML = '<img src="/static/images/bar1.png" alt="Visualize" />';
+              
+              // Add event listener to the icon
+              setTimeout(() => {
+                iconPart.addEventListener("click", () => {
+                  console.log("Visualization icon clicked!");
+                  const encodedQuery = encodeURIComponent(
+                    this.messages[index-1]?.text || ""
+                  );
+                  this.openVisualizationModal(encodedQuery);
+                });
+              }, 50);
+              
+              messageContent.appendChild(iconPart);
+            }
+          } else {
+            // For regular messages
+            messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
+          }
+    
+          // Add edit icon for user messages
+          if (msg.sender === 'user') {
+            const editIcon = document.createElement("span");
+            editIcon.className = "edit-message-icon";
+            editIcon.innerHTML = "✎";
+            editIcon.addEventListener('click', () => this.startEditMessage(index));
+            
+            messageBubble.appendChild(editIcon);
+          }
+    
+          messageBubble.appendChild(messageContent);
+        }
+    
+        messageWrapper.appendChild(messageBubble);
+        messageContainer.appendChild(messageWrapper);
+      });
+    
+      // Auto-scroll to the bottom after populating messages
+      this.scrollToBottom();
+    }
 
-    // Auto-scroll to the bottom after populating messages
-    this.scrollToBottom();
-  }
-  handleOptionSelection(optionText) {
-    this.userInput = optionText;
-    this.sendMessage();
-  }
+    handleOptionSelection(optionText) {
+      this.userInput = optionText;
+      this.sendMessage();
+    }
 
-  // Modify the render method to implement the toggle button and conditional display
-  // Modify the render method to implement the requested changes
-  render() {
-    return html`
+    
+  
+    // Modify the render method to implement the toggle button and conditional display
+    // Modify the render method to implement the requested changes
+    render() {
+      return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
           src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
@@ -1758,12 +2617,18 @@ class ChatBotComponent extends LitElement {
             alt="Chat Logo"
           />
           <div class="chat-title-container">
-            <div class="chat-title">SASI</div>
-            <div class="chat-subtitle">Scalable Analytical Smart-city Interface</div>
-          </div>
-          <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
+    <div class="chat-title">SASI </div>
+    <div class="chat-subtitle">   Scalable Analytical Smart-city Interface
+    
+    </div>
+    
+  </div>
+  <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
+  
+          
         </div>
         <div id="message-container" class="messages"></div>
+  
   
         ${this.conversationOptions && this.conversationOptions.length > 0 ? html`
           <div class="conversation-options">
@@ -1820,7 +2685,7 @@ class ChatBotComponent extends LitElement {
         </div>
       </div>
     `;
+    }
   }
-}
-
-customElements.define("chat-bot-component", ChatBotComponent);
+  
+  customElements.define("chat-bot-component", ChatBotComponent);

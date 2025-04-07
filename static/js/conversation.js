@@ -9,6 +9,8 @@ const conversationTree = {
     { text: "4", next: "ConversationalModeOptions" }, // Changed to point to new intermediate node
   ],
 
+
+
   nodes: {
 
 
@@ -20,15 +22,15 @@ const conversationTree = {
       next: "ProcessQuestionNode",
       textInput: true,
       recommendedQuestions: [
-        "How is the solar panel performance at Admin Block?",
+        "What is the temperature at Kohli Block?",
         "What are the current readings from the Air Quality sensor at T-Hub?",
-
-        "What are the current readings from the Solar Panel sensor at Vindhya?",
-        "What are the current readings from the Solar Panel sensor at Admin Block?",
-        "What are the current readings from the Air Quality sensor at kadamba Nivas?",
-        "What are the current readings from the Water Flow sensor at Bodh Bhavan 1?"
+        "Can i go for the walk today?",
+        "What is the temperature yesterday at main gate?",
+        "What is the node health at main gate?",
+        "What are average reading of temperature at vindhya?"
       ]
     },
+
 
     BuildingNode: {
       message:
@@ -93,6 +95,17 @@ const conversationTree = {
       ],
     },
 
+
+    // Add these to your conversationTree.nodes
+    "TemperatureIndoorNode": {
+      message: "Processing your indoor readings request...",
+      // This node is just a placeholder as the actual processing happens in the sendMessage function
+    },
+    "TemperatureOutdoorNode": {
+      message: "Processing your outdoor readings request...",
+      // This node is just a placeholder as the actual processing happens in the sendMessage function
+    },
+
     // AskQuestionNode: {
     //   message: "Please enter your question:",
     //   input: true,
@@ -113,7 +126,7 @@ const conversationTree = {
       message: "Processing your question...",
       terminate: true,
       apiCall: true,
-    
+
       async process(inputText) {
         try {
           const response = await fetch("http://localhost:8001/query", {
@@ -121,12 +134,12 @@ const conversationTree = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query: inputText }),
           });
-    
+
           if (!response.ok) {
             console.error("Server Error:", response.statusText);
             throw new Error(`HTTP error! Status: ${response.status}`);
           }
-    
+
           const data = await response.json();
           return data.response || "No response from backend.";
         } catch (error) {
@@ -213,7 +226,7 @@ const conversationTree = {
     },
     FloorNode: {
       message:
-        "Please select a floor by entering the corresponding number:\n1.Ground floor \n2. First floor\n3. Second floor\n4.Third floor\n5. Fourth floor\n6. Library\n7. Computer Lab\n8. Overhead Tank \n9.SS Tank \n10. Sump\n11.Parking\n",
+        "Please select a floor by entering the corresponding number:\n1.Ground floor \n2. First floor\n3. Second floor\n4.Third floor\n5. Fourth floor\n6. Library\n7. TemperatureIndoorNodeuter Lab\n8. Overhead Tank \n9.SS Tank \n10. Sump\n11.Parking\n",
       options: [
         { text: "1", identifier: "00", next: "FinalNode" },
         { text: "2", identifier: "01", next: "FinalNode" },

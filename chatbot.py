@@ -55,7 +55,7 @@ class QueryResponse(BaseModel):
 def load_prompt_files():
     prompts = {}
     # Load merge.txt
-    with open('merge1.txt', 'r') as file:
+    with open('mergefinal.txt', 'r') as file:
         prompts['merge'] = file.read()
     
     # Load node id.txt
@@ -63,7 +63,7 @@ def load_prompt_files():
         prompts['node_id'] = file.read()
     
     # Load prompt2.txt
-    with open('prompt0.txt', 'r') as file:
+    with open('prompt2final.txt', 'r') as file:
         prompts['prompt2'] = file.read()
     
     # Load classification prompt
@@ -95,6 +95,9 @@ Please analyze the provided temporal data and answer the user's query: {query}
 Here is the historical data for the requested time period ({time_period}):
 {data}
 
+Today's latest readings are also included:
+{today_data}
+
 Provide a clear, concise answer that MUST include:
 1. A summary of the data trends over the requested time period
 2. Key insights or anomalies if present
@@ -103,6 +106,7 @@ Provide a clear, concise answer that MUST include:
    - Maximum values for each parameter with timestamps when they occurred  
    - Average values for each parameter over the time period
 4. Comparisons between different time points if applicable
+5. Comparison with today's latest readings
 
 Your response should be informative and focused on providing statistical insights from the data.
 """
@@ -180,6 +184,10 @@ def get_date_range(time_period):
         from_date = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
     elif time_period == "year":
         from_date = (now - timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    elif time_period == "today":
+        # For today's data, set the start time to midnight of the current day
+        today_start = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=pytz.UTC)
+        from_date = today_start.strftime("%Y-%m-%dT%H:%M:%SZ")
     else:
         # Default to last day if unknown time period
         from_date = (now - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -228,6 +236,11 @@ def fetch_historical_data(node_ids, time_period):
     
     return results
 
+# NEW FUNCTION: Fetch today's data for specified node IDs
+def fetch_todays_data(node_ids):
+    time_period = "today"
+    return fetch_historical_data(node_ids, time_period)
+
 # Function to process temporal data and calculate statistics
 def process_temporal_data(node_data):
     stats = {}
@@ -265,9 +278,13 @@ def process_temporal_data(node_data):
             for param_name, param_data in params.items():
                 values = param_data["values"]
                 if values:
+                    min_idx = values.index(min(values))
+                    max_idx = values.index(max(values))
                     param_stats[param_name] = {
                         "min": min(values),
+                        "min_timestamp": param_data["timestamps"][min_idx] if param_data["timestamps"] else None,
                         "max": max(values),
+                        "max_timestamp": param_data["timestamps"][max_idx] if param_data["timestamps"] else None,
                         "avg": sum(values) / len(values),
                         "count": len(values),
                         "first_timestamp": param_data["timestamps"][0] if param_data["timestamps"] else None,
@@ -288,8 +305,13 @@ def generate_response(prompts, classification, user_query, node_data, is_tempora
     
     # For temporal data, format it and check if we have valid data
     if is_temporal and time_period:
+        # Fetch today's data for the same nodes
+        today_data = fetch_todays_data(list(node_data.keys()))
+        
         # Process data and calculate statistics as before
         formatted_data = {}
+        formatted_today_data = {}
+        
         for node_id, node_info in node_data.items():
             data_summary[node_id] = {
                 "type": node_id.split('-')[0] if '-' in node_id else "unknown",
@@ -307,19 +329,31 @@ def generate_response(prompts, classification, user_query, node_data, is_tempora
             else:
                 formatted_data[node_id] = {"note": "No data available for this node"}
         
+        # Format today's data
+        for node_id, node_info in today_data.items():
+            if "filtered_data" in node_info and node_info["filtered_data"]:
+                formatted_today_data[node_id] = node_info["filtered_data"]
+            else:
+                formatted_today_data[node_id] = {"note": "No data available for today"}
+        
         # Calculate statistics
         stats = process_temporal_data(node_data)
+        today_stats = process_temporal_data(today_data)
         
         formatted_data_str = json.dumps(formatted_data, indent=2)
+        formatted_today_data_str = json.dumps(formatted_today_data, indent=2)
         stats_str = json.dumps(stats, indent=2)
+        today_stats_str = json.dumps(today_stats, indent=2)
         data_summary_str = json.dumps(data_summary, indent=2)
         
         # Create enhanced prompt with explicit instructions for concise response
         enhanced_prompt = prompts['temporal'].replace("{query}", user_query) \
                                          .replace("{data}", formatted_data_str) \
+                                         .replace("{today_data}", formatted_today_data_str) \
                                          .replace("{time_period}", time_period)
         
-        enhanced_prompt += f"\n\nStatistics summary:\n{stats_str}\n\n"
+        enhanced_prompt += f"\n\nStatistics summary for historical period:\n{stats_str}\n\n"
+        enhanced_prompt += f"\nToday's statistics summary:\n{today_stats_str}\n\n"
         enhanced_prompt += f"\nData availability:\n{data_summary_str}\n\n"
         
         # Add explicit instructions for brevity while including key statistics
@@ -347,8 +381,9 @@ def generate_response(prompts, classification, user_query, node_data, is_tempora
         prompt_template += "\n\nIMPORTANT: Your response must be ONLY 3-4 lines maximum. Be direct and concise with the most important information."
     
     # Update system prompt to emphasize brevity
+    # Update system prompt to emphasize brevity and fix encoding issues
     messages = [
-        ChatMessage(role="system", content="You are a smart city assistant providing extremely concise answers (3-4 lines maximum). When analyzing temporal data, include key statistics (min/max/avg) while keeping responses brief."),
+        ChatMessage(role="system", content="You are a smart city assistant providing extremely concise answers (3-4 lines maximum). When analyzing temporal data, include key statistics (min/max/avg) while keeping responses brief. Always compare historical data with today's readings when appropriate. IMPORTANT: When displaying temperature values, use the proper degree symbol '°C' (Unicode U+00B0) rather than 'Â°C'. Format all units correctly in your responses."),
         ChatMessage(role="user", content=prompt_template)
     ]
     
@@ -357,7 +392,13 @@ def generate_response(prompts, classification, user_query, node_data, is_tempora
         messages=messages
     )
     
-    return response.choices[0].message.content
+    # Fix encoding issues in the response
+    response_text = response.choices[0].message.content
+    # Replace incorrect degree symbol encoding with the correct one
+    response_text = response_text.replace("Â°C", "°C")
+    response_text = response_text.replace("Â°F", "°F")
+    
+    return response_text
 
 # Process and extract classification and node IDs from the response
 def extract_response_data(response_text):
@@ -461,8 +502,189 @@ def fetch_all_node_data(node_ids):
     
     return results
 
+# Add this new function to fetch average data from the API
+def fetch_average_data():
+    base_url = "https://smartcitylivinglab.iiit.ac.in/verticals/avg/"
+    
+    try:
+        response = requests.get(base_url)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to fetch average data: {str(e)}"}
+
+# Add function to detect average-related queries
+def detect_average_query(user_query):
+    # Define patterns to detect average-related queries
+    avg_patterns = [
+        r'(average|avg|mean)\s+(of|for|across|in)\s+(.+)',
+        r'(.+)\s+(average|avg|mean)',
+        r'what\s+is\s+the\s+(average|avg|mean)\s+(.+)',
+        r'latest\s+(average|avg|mean)',
+        r'today\'?s?\s+(average|avg|mean)',
+        r'current\s+(average|avg|mean)'
+    ]
+    
+    for pattern in avg_patterns:
+        if re.search(pattern, user_query, re.IGNORECASE):
+            return True
+    
+    return False
+
+# Add function to extract parameter from the query
+def extract_parameter_from_query(user_query):
+    # List of parameters to look for in the query
+    parameters = {
+        'temperature': ['temperature', 'temp'],
+        'relative_humidity': ['humidity', 'relative humidity', 'rh'],
+        'pm25': ['pm2.5', 'pm 2.5', 'particulate matter 2.5'],
+        'pm10': ['pm10', 'pm 10', 'particulate matter 10'],
+        'noise': ['noise', 'sound level', 'decibel'],
+        'aqi': ['aqi', 'air quality index'],
+        'aql': ['aql', 'air quality level']
+    }
+    
+    # Check for each parameter in the query
+    for param_key, param_aliases in parameters.items():
+        for alias in param_aliases:
+            if re.search(r'\b' + re.escape(alias) + r'\b', user_query, re.IGNORECASE):
+                return param_key
+    
+    # Default to None if no specific parameter found
+    return None
+# Add a new function to fetch node status
+def fetch_node_status(node_id):
+    base_url = "https://smartcitylivinglab.iiit.ac.in/maintenance-dashboard-api/get_node_status"
+    url = f"{base_url}?node_id={node_id}"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise exception for 4XX/5XX status codes
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to fetch status for node {node_id}: {str(e)}"}
+
+# Function to check if query is about node status
+def detect_status_query(user_query):
+    status_patterns = [
+        r'(node\s+)?status',
+        r'(is\s+)?(node\s+)?(active|inactive)',
+        r'node\s+health',
+        r'(node\s+)?working\s+(condition|state)',
+        r'(node\s+)?current\s+state'
+    ]
+    
+    for pattern in status_patterns:
+        if re.search(pattern, user_query, re.IGNORECASE):
+            return True
+    
+    return False
+
+# Function to generate response for node status
+def generate_node_status_response(user_query, node_ids):
+    # Fetch status for all nodes
+    node_statuses = {}
+    for node_id in node_ids:
+        node_statuses[node_id] = fetch_node_status(node_id)
+    
+    # Prepare a detailed status summary
+    status_summary = []
+    for node_id, status in node_statuses.items():
+        if isinstance(status, dict):
+            # Extract key status information
+            node_status = status.get('status', 'Unknown')
+            last_seen = status.get('last_seen', 'N/A')
+            status_summary.append(f"{node_id}: {node_status} (Last seen: {last_seen})")
+    
+    # Prepare system prompt for generating a concise response
+    prompt = f"""
+You are a smart city assistant providing a detailed yet concise answer about node statuses.
+The user has asked about node status for the following nodes: {node_ids}
+
+Detailed Node Status:
+{chr(10).join(status_summary)}
+
+Node Status Details:
+{json.dumps(node_statuses, indent=2)}
+
+IMPORTANT: 
+- Provide a comprehensive overview of all node statuses
+- Include the total number of nodes and their current states
+- Highlight any nodes with unusual status
+- Be clear and informative but remain concise
+- Use no more than 4-5 lines in your response
+"""
+    
+    # Query Mistral for the response
+    messages = [
+        ChatMessage(role="system", content="You are a smart city assistant providing a comprehensive yet concise overview of node statuses. Include all node details clearly and highlight any significant status variations."),
+        ChatMessage(role="user", content=prompt)
+    ]
+    
+    response = client.chat(
+        model="mistral-large-latest",
+        messages=messages
+    )
+    
+    return response.choices[0].message.content
 # Main function to handle user queries
 def process_query(user_query):
+    
+    if detect_average_query(user_query):
+        # Extract parameter if mentioned in the query
+        parameter = extract_parameter_from_query(user_query)
+        
+        # Fetch average data
+        avg_data = fetch_average_data()
+        
+        # Generate response based on average data
+        response = generate_average_response(user_query, avg_data, parameter)
+        
+        # Return a simplified result structure for average queries
+        return {
+            "classification": "AVERAGE",
+            "node_ids": [],
+            "node_data": avg_data,
+            "response": response,
+            "is_temporal": False,
+            "time_period": None,
+            "parameter": parameter
+        }
+    if detect_status_query(user_query):
+        prompts = load_prompt_files()
+        system_prompt = prepare_system_prompt(prompts)
+        response = query_mistral_classification(system_prompt, user_query)
+        response_data = extract_response_data(response)
+        
+        # Get node IDs from the classification
+        node_ids = response_data.get("node_ids", [])
+        
+        # If no node IDs found, try to extract from the query
+        if not node_ids:
+            # You might want to implement a method to extract node IDs from the query
+            # For now, we'll return a generic response if no node IDs are found
+            return {
+                "classification": "NODE_STATUS",
+                "node_ids": [],
+                "node_data": {},
+                "response": "I couldn't identify specific nodes to check the status for. Please provide specific node IDs.",
+                "is_temporal": False,
+                "time_period": None
+            }
+        
+        # Generate response for node status
+        natural_response = generate_node_status_response(user_query, node_ids)
+        
+        # Return result structure
+        return {
+            "classification": "NODE_STATUS",
+            "node_ids": node_ids,
+            "node_data": {node_id: fetch_node_status(node_id) for node_id in node_ids},
+            "response": natural_response,
+            "is_temporal": False,
+            "time_period": None
+        }
+    
     prompts = load_prompt_files()
     system_prompt = prepare_system_prompt(prompts)
     response = query_mistral_classification(system_prompt, user_query)
@@ -485,7 +707,7 @@ def process_query(user_query):
     # Fetch the appropriate data based on whether it's a temporal query
     if is_temporal and time_period:
         node_data = fetch_historical_data(node_ids, time_period)
-        # Use the full node_data for response generation to ensure we have all metadata
+        # Include today's data in the response structure but it will be fetched in generate_response
         response_node_data = node_data
     else:
         node_data = fetch_all_node_data(node_ids)
@@ -512,7 +734,64 @@ def process_query(user_query):
         "time_period": time_period
     }
     
+    # Add today's data for temporal queries
+    if is_temporal:
+        result["todays_data"] = fetch_todays_data(node_ids)
+    
     return result
+# Add function to generate response for average queries
+def generate_average_response(user_query, avg_data, parameter=None):
+    # Handle case where API call failed
+    if "error" in avg_data:
+        return f"Sorry, I couldn't retrieve the average data. {avg_data['error']}"
+    
+    # Prepare system prompt for concise response
+    prompt = f"""
+You are a smart city assistant providing extremely concise answers (2-3 lines maximum).
+The user has asked about average sensor readings: "{user_query}"
+
+Here is the current average data across all sensor nodes:
+{json.dumps(avg_data, indent=2)}
+"""
+    
+    # Add specific instructions based on whether a parameter was detected
+    if parameter:
+        # Find which vertical (aq, solar, etc.) contains this parameter
+        vertical_with_param = None
+        param_value = None
+        
+        for vertical, data in avg_data.items():
+            if isinstance(data, dict) and parameter in data:
+                vertical_with_param = vertical
+                param_value = data[parameter]
+                break
+        
+        if vertical_with_param and param_value:
+            prompt += f"\nThe user specifically asked about the '{parameter}' parameter, which has an average value of {param_value} across all {vertical_with_param} nodes. Focus your response on this specific parameter."
+        else:
+            prompt += f"\nThe user asked about the '{parameter}' parameter, but it wasn't found in the data. Mention this in your response."
+    else:
+        prompt += "\nThe user didn't specify a particular parameter. Provide a brief overview of key parameters from the data."
+    
+    prompt += "\nIMPORTANT: Your response must be ONLY 2-3 lines maximum. Be direct and concise with the most important information. Format all units correctly in your response."
+    
+    # Query Mistral for the response
+    messages = [
+        ChatMessage(role="system", content="You are a smart city assistant providing extremely concise answers (2-3 lines maximum). Always format units correctly, especially temperature with the proper degree symbol '°C' (Unicode U+00B0)."),
+        ChatMessage(role="user", content=prompt)
+    ]
+    
+    response = client.chat(
+        model="mistral-large-latest",
+        messages=messages
+    )
+    
+    # Fix encoding issues in the response
+    response_text = response.choices[0].message.content
+    response_text = response_text.replace("Â°C", "°C")
+    response_text = response_text.replace("Â°F", "°F")
+    
+    return response_text
 
 # Load prompts at startup
 prompts = load_prompt_files()
@@ -571,8 +850,10 @@ async def debug_get(q: str = Query(..., description="User query for debugging"))
     
     # Fetch the data based on query type
     node_data = {}
+    today_data = {}
     if is_temporal and time_period and node_ids:
         node_data = fetch_historical_data(node_ids, time_period)
+        today_data = fetch_todays_data(node_ids)
     elif node_ids:
         node_data = fetch_all_node_data(node_ids)
     
@@ -585,6 +866,7 @@ async def debug_get(q: str = Query(..., description="User query for debugging"))
             "time_period": regex_time_period
         },
         "node_data": node_data,
+        "todays_data": today_data if is_temporal else {},
         "is_temporal": is_temporal,
         "time_period": time_period
     }
@@ -610,8 +892,10 @@ async def debug_post(request: QueryRequest):
     
     # Fetch the data based on query type
     node_data = {}
+    today_data = {}
     if is_temporal and time_period and node_ids:
         node_data = fetch_historical_data(node_ids, time_period)
+        today_data = fetch_todays_data(node_ids)
     elif node_ids:
         node_data = fetch_all_node_data(node_ids)
     
@@ -624,6 +908,7 @@ async def debug_post(request: QueryRequest):
             "time_period": regex_time_period
         },
         "node_data": node_data,
+        "todays_data": today_data if is_temporal else {},
         "is_temporal": is_temporal,
         "time_period": time_period
     }
