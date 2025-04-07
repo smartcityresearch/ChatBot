@@ -2489,7 +2489,7 @@ flex-direction: row;
       if (msg.sender === "bot") {
         const avatarContainer = document.createElement("div");
         avatarContainer.className = "chat_user_avatar";
-        avatarContainer.innerHTML = '<img src="/static/images/pre1.png" alt="Bot" class="md-user-image">';
+        avatarContainer.innerHTML = '<img src="https://smartcityresearch.github.io/ChatBot/static/images/pre1.png" alt="Bot" class="md-user-image">';
         messageWrapper.appendChild(avatarContainer);
       }
 
@@ -2549,7 +2549,7 @@ flex-direction: row;
             const iconPart = document.createElement("div");
             iconPart.id = textAndIcon[1].split('"')[0];
             iconPart.className = "visualization-icon";
-            iconPart.innerHTML = '<img src="/static/images/bar1.png" alt="Visualize" />';
+            iconPart.innerHTML = '<img src="https://smartcityresearch.github.io/ChatBot/static/images/bar1.png" alt="Visualize" />';
 
             // Add event listener to the icon
             setTimeout(() => {
