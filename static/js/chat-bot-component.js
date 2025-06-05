@@ -10,7 +10,7 @@ import {
 import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
 import { conversationTree } from "./conversation.js";
 
-class DataProcessor {
+export class DataProcessor {
   constructor(data) {
     this.data = data;
   }
@@ -23,6 +23,9 @@ class DataProcessor {
 
   // Parse the first numeric part of a string if applicable
   parseValue(value) {
+    if (value === null || value === undefined) {
+      return value;
+    }
     const matches = value.match(/^[\d\.]+/);
     if (matches) {
       return parseFloat(matches[0]);
@@ -32,6 +35,10 @@ class DataProcessor {
 
   // Determines the mode (most frequently occurring value) in an array
   findMode(values) {
+    if (!values || values.length === 0) {
+      return undefined;
+    }
+    
     const frequency = {};
     let maxFreq = 0;
     let mode = values[0];
@@ -2689,3 +2696,5 @@ flex-direction: row;
 }
 
 customElements.define("chat-bot-component", ChatBotComponent);
+
+export { ChatBotComponent };
