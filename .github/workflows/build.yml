@@ -2,7 +2,7 @@ name: CI with SonarQube
 
 on:
   push:
-    branches: [ development ]
+    branches: [development]
   pull_request:
 
 jobs:
@@ -21,6 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install pytest pytest-cov lxml
           pip install fastapi uvicorn python-dotenv pydantic requests mistralai
           pip install pytest-xdist pytest-asyncio httpx
@@ -73,24 +74,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SonarScanner
-        uses: SonarSource/sonarcloud-github-action@master
-        with:
-          scanner-version: 'latest'
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: test-reports
 
+      # Install SonarScanner CLI manually (if you use self-hosted SonarQube)
+      - name: Install SonarScanner CLI
+        run: |
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+          unzip sonar-scanner-cli-4.8.0.2856-linux.zip
+          echo "SONAR_SCANNER=$PWD/sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner" >> $GITHUB_ENV
+          export PATH=$PATH:$PWD/sonar-scanner-4.8.0.2856-linux/bin
+
       - name: Run SonarQube Scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonar-scanner \
-            -Dsonar.projectKey=<your_project_key> \
-            -Dsonar.organization=<your_org_key> \
+          $SONAR_SCANNER \
             -Dsonar.sources=. \
             -Dsonar.tests=tests \
+            -Dsonar.host.url=<your_sonarqube_server_url> \
+            -Dsonar.login=$SONAR_TOKEN \
             -Dsonar.python.coverage.reportPaths=coverage.xml \
             -Dsonar.testExecutionReportPaths=sonar-test-report.xml
