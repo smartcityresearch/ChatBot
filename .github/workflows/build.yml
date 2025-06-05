@@ -9,7 +9,8 @@ jobs:
   test:
     name: Run Tests and Generate Reports
     runs-on: ubuntu-latest
-
+    env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
