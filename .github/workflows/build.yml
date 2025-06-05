@@ -1,0 +1,96 @@
+name: CI with SonarQube
+
+on:
+  push:
+    branches: [ development ]
+  pull_request:
+
+jobs:
+  test:
+    name: Run Tests and Generate Reports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-cov lxml
+          pip install fastapi uvicorn python-dotenv pydantic requests mistralai
+          pip install pytest-xdist pytest-asyncio httpx
+
+      - name: Run tests and generate coverage
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest --cov=. --cov-report=xml --junitxml=tests/test-results.xml
+
+      - name: Convert JUnit to SonarQube Format
+        run: |
+          python3 - <<EOF
+          import sys
+          from lxml import etree
+
+          parser = etree.XMLParser(remove_blank_text=True)
+          tree = etree.parse("tests/test-results.xml", parser)
+          root = tree.getroot()
+
+          sonar_root = etree.Element("testExecutions", version="1")
+
+          for suite in root.findall("testsuite"):
+              file_attr = suite.get("name")
+              for case in suite.findall("testcase"):
+                  file_el = etree.SubElement(sonar_root, "file", path=file_attr)
+                  case_el = etree.SubElement(file_el, "testCase", name=case.get("name"), duration="1")
+                  if case.find("failure") is not None:
+                      case_el.set("status", "fail")
+                      failure = etree.SubElement(case_el, "failure", message=case.find("failure").get("message"))
+                      failure.text = case.find("failure").text or ""
+
+          with open("sonar-test-report.xml", "wb") as f:
+              f.write(etree.tostring(sonar_root, pretty_print=True, xml_declaration=True, encoding="UTF-8"))
+          EOF
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: |
+            coverage.xml
+            sonar-test-report.xml
+
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SonarScanner
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          scanner-version: 'latest'
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: test-reports
+
+      - name: Run SonarQube Scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=<your_project_key> \
+            -Dsonar.organization=<your_org_key> \
+            -Dsonar.sources=. \
+            -Dsonar.tests=tests \
+            -Dsonar.python.coverage.reportPaths=coverage.xml \
+            -Dsonar.testExecutionReportPaths=sonar-test-report.xml
