@@ -9,70 +9,70 @@ jobs:
 #############################
 # FRONTEND
 #############################
-frontend:
-  name: Frontend Tests
-  runs-on: ubuntu-latest
-  defaults:
-    run:
-      shell: bash
-  steps:
-    - uses: actions/checkout@v3
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 16
-
-    - name: Install dependencies
-      run: |
-        npm install --legacy-peer-deps
-        npm install --save-dev jest-junit --legacy-peer-deps
-
-    - name: Run Jest with coverage
-      run: |
-        chmod +x ./node_modules/.bin/jest
-        ./node_modules/.bin/jest \
-          --config=jest.config.js \
-          --ci \
-          --coverage \
-          --reporters=default \
-          --reporters=jest-junit
-
-    - name: Prepare coverage artifacts
-      run: |
-        mkdir -p coverage/frontend
-        find coverage -mindepth 1 -maxdepth 1 ! -name frontend -exec cp -r {} coverage/frontend/ \;
-        if [ -f coverage/lcov.info ]; then cp coverage/lcov.info coverage/frontend/lcov.info; fi
-
-    - name: Generate frontend test report (if missing)
-      run: |
-        mkdir -p tests/reports
-        if [ ! -f tests/reports/frontend-test-report.xml ]; then
-          cat > frontend-test-report.xml <<EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <testExecutions version="1">
-          <file path="tests/js/conversation.test.js">
-            <testCase name="conversationTree structure tests" duration="1"/>
-          </file>
-          <file path="tests/js/chat-bot-component.test.js">
-            <testCase name="ChatBotComponent tests" duration="1"/>
-          </file>
-        </testExecutions>
-        EOF
-              cp frontend-test-report.xml tests/reports/
-            fi
-
-    - name: Upload frontend artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-artifacts
-        path: |
-          coverage/
-          coverage/frontend/
-          frontend-test-report.xml
-          junit.xml
-          tests/reports/
-
+  frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+  
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+  
+      - name: Install dependencies
+        run: |
+          npm install --legacy-peer-deps
+          npm install --save-dev jest-junit --legacy-peer-deps
+  
+      - name: Run Jest with coverage
+        run: |
+          chmod +x ./node_modules/.bin/jest
+          ./node_modules/.bin/jest \
+            --config=jest.config.js \
+            --ci \
+            --coverage \
+            --reporters=default \
+            --reporters=jest-junit
+  
+      - name: Prepare coverage artifacts
+        run: |
+          mkdir -p coverage/frontend
+          find coverage -mindepth 1 -maxdepth 1 ! -name frontend -exec cp -r {} coverage/frontend/ \;
+          if [ -f coverage/lcov.info ]; then cp coverage/lcov.info coverage/frontend/lcov.info; fi
+  
+      - name: Generate frontend test report (if missing)
+        run: |
+          mkdir -p tests/reports
+          if [ ! -f tests/reports/frontend-test-report.xml ]; then
+            cat > frontend-test-report.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testExecutions version="1">
+            <file path="tests/js/conversation.test.js">
+              <testCase name="conversationTree structure tests" duration="1"/>
+            </file>
+            <file path="tests/js/chat-bot-component.test.js">
+              <testCase name="ChatBotComponent tests" duration="1"/>
+            </file>
+          </testExecutions>
+          EOF
+                cp frontend-test-report.xml tests/reports/
+              fi
+  
+      - name: Upload frontend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-artifacts
+          path: |
+            coverage/
+            coverage/frontend/
+            frontend-test-report.xml
+            junit.xml
+            tests/reports/
+  
 
   #############################
   # BACKEND
