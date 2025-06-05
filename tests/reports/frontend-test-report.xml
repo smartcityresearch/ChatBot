@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testExecutions version="1">
+  <file path="tests/conversation.test.js">
+    <testCase name="conversationTree structure should have a main message and options" duration="1"/>
+    <testCase name="conversationTree structure should contain AskQuestionNode" duration="1"/>
+    <testCase name="conversationTree structure should contain BuildingNode with options" duration="1"/>
+    <testCase name="conversationTree structure should contain ConversationalModeOptions node" duration="1"/>
+    <testCase name="conversationTree structure options should have valid next node references" duration="1"/>
+    <testCase name="conversationTree structure BuildingNode options should have identifiers" duration="1"/>
+    <testCase name="conversationTree structure CommonVerticalNode options should have accumulators" duration="1"/>
+    <testCase name="conversationTree structure ProcessQuestionNode should have process method" duration="1"/>
+    <testCase name="conversationTree structure extractMessages should extract all messages" duration="1"/>
+    <testCase name="conversationTree navigation should navigate from main menu to BuildingNode" duration="1"/>
+    <testCase name="conversationTree navigation should navigate from BuildingNode to CommonBuildingNode" duration="1"/>
+    <testCase name="conversationTree navigation should navigate to AskQuestionNode from ConversationalModeOptions" duration="1"/>
+    <testCase name="specific node types input nodes should have required properties" duration="1"/>
+    <testCase name="specific node types terminal nodes should have terminate flag" duration="1"/>
+    <testCase name="specific node types API nodes should have apiCall flag" duration="1"/>
+    <!-- New tests -->
+    <testCase name="conversationTree structure all nodes should have valid structure" duration="1"/>
+    <testCase name="conversationTree structure vertical navigation path should be complete" duration="1"/>
+    <testCase name="conversationTree structure node specific path should be complete" duration="1"/>
+    <testCase name="conversationTree navigation should navigate from ConversationalModeOptions to MainMenu" duration="1"/>
+    <testCase name="conversationTree navigation should navigate through questions flow" duration="1"/>
+    <testCase name="conversationTree navigation should handle exit flow correctly" duration="1"/>
+    <testCase name="conversationTree functionality recommended questions should be valid" duration="1"/>
+    <testCase name="conversationTree structure BuildingNode should have correct number of options" duration="1"/>
+    <testCase name="conversationTree structure VerticalNode should have correct number of options" duration="1"/>
+    <testCase name="conversationTree structure MainMenu should have options matching root options" duration="1"/>
+  </file>
+  <file path="tests/chat-bot-component.test.js">
+    <testCase name="ChatBotComponent should initialize with default message" duration="1"/>
+    <testCase name="ChatBotComponent togglePopup should toggle popup state" duration="1"/>
+    <testCase name="ChatBotComponent toggleRecommendedQuestions toggles visibility state" duration="1"/>
+    <testCase name="ChatBotComponent handleUserInput updates userInput property" duration="1"/>
+    <testCase name="ChatBotComponent extractLocation finds valid location" duration="1"/>
+    <testCase name="ChatBotComponent DataProcessor.parseValue parses numbers correctly" duration="1"/>
+    <testCase name="ChatBotComponent DataProcessor.aggregateData returns expected values" duration="1"/>
+    <testCase name="ChatBotComponent sendMessage adds messages to the conversation" duration="1"/>
+    <testCase name="ChatBotComponent handleKeyDown triggers sendMessage on Enter key" duration="1"/>
+    <testCase name="ChatBotComponent message editing flow works correctly" duration="1"/>
+    <testCase name="ChatBotComponent cancel edit message resets editing state" duration="1"/>
+    <testCase name="ChatBotComponent handleOptionSelection sets userInput and sends message" duration="1"/>
+    <testCase name="ChatBotComponent handleRecommendedQuestion sets userInput and clears recommendations" duration="1"/>
+    <testCase name="ChatBotComponent handleLocationButton adds a processing message" duration="1"/>
+    <testCase name="ChatBotComponent sendMessageToBackend calls fetch with correct parameters" duration="1"/>
+    <testCase name="ChatBotComponent openVisualizationModal handles chart creation and destruction" duration="1"/>
+    <testCase name="ChatBotComponent fetchDataAndAskContinue updates identifiers and adds message" duration="1"/>
+    <testCase name="ChatBotComponent getLevenshteinDistance calculates string distance" duration="1"/>
+    <testCase name="ChatBotComponent getNodeColor returns consistent colors" duration="1"/>
+    <testCase name="ChatBotComponent extractTemporalData processes data correctly" duration="1"/>
+    <testCase name="ChatBotComponent extractCurrentData processes data correctly" duration="1"/>
+    <!-- New tests -->
+    <testCase name="ChatBotComponent message rendering should display user and bot messages correctly" duration="1"/>
+    <testCase name="ChatBotComponent message editing should save edited message and get new response" duration="1"/>
+    <testCase name="ChatBotComponent message editing should cancel editing when cancel button clicked" duration="1"/>
+    <testCase name="ChatBotComponent chat options should display options when available" duration="1"/>
+    <testCase name="ChatBotComponent recommended questions should toggle visibility" duration="1"/>
+    <testCase name="ChatBotComponent popup functionality should reset state when reopened" duration="1"/>
+    <testCase name="ChatBotComponent should auto-scroll to bottom when new messages added" duration="1"/>
+    <testCase name="ChatBotComponent sendMessage should handle temporal queries with visualization" duration="1"/>
+    <testCase name="ChatBotComponent extractLocation should handle different location formats" duration="1"/>
+    <testCase name="ChatBotComponent extractLocation should return undefined for unknown locations" duration="1"/>
+    <testCase name="ChatBotComponent handleLocationButton should add location-specific response" duration="1"/>
+    <testCase name="ChatBotComponent visualization modal should create chart based on parameter type" duration="1"/>
+    <testCase name="ChatBotComponent visualization modal should handle errors gracefully" duration="1"/>
+    <testCase name="ChatBotComponent DataProcessor calculateAverage should handle empty arrays" duration="1"/>
+    <testCase name="ChatBotComponent DataProcessor findMode should return most frequent value" duration="1"/>
+    <testCase name="ChatBotComponent DataProcessor aggregateData should handle different methods" duration="1"/>
+    <testCase name="ChatBotComponent fetchDataAndAskContinue should handle missing identifiers" duration="1"/>
+    <testCase name="ChatBotComponent fetchDataAndAskContinue should display error for invalid node ID" duration="1"/>
+    <testCase name="ChatBotComponent fetchDataAndAskContinue should find closest match for node ID" duration="1"/>
+    <testCase name="ChatBotComponent sendMessageToBackend should handle server errors" duration="1"/>
+  </file>
+</testExecutions>
