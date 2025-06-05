@@ -156,10 +156,11 @@ jobs:
           <?xml version="1.0" encoding="UTF-8"?>
           <testExecutions version="1">
           EOF
-          awk '/<testExecutions/{flag=1;next}/<\/testExecutions>/{flag=0}flag' artifacts/frontend-artifacts/frontend-test-report.xml >> merged-test-report.xml
-          awk '/<testExecutions/{flag=1;next}/<\/testExecutions>/{flag=0}flag' artifacts/backend-artifacts/backend-test-report.xml >> merged-test-report.xml
+          awk '/<testExecutions/{flag=1;next}/<\/testExecutions>/{flag=0}flag' artifacts/frontend-artifacts/tests/reports/frontend-test-report.xml >> merged-test-report.xml
+          awk '/<testExecutions/{flag=1;next}/<\/testExecutions>/{flag=0}flag' artifacts/backend-artifacts/tests/reports/backend-test-report.xml >> merged-test-report.xml
           echo '</testExecutions>' >> merged-test-report.xml
           cat merged-test-report.xml
+
 
       - name: Set up SonarScanner CLI
         uses: SonarSource/sonarcloud-github-action@master
