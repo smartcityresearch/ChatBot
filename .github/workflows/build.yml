@@ -166,14 +166,16 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@master
         with:
           scanner-version: 'latest'
-
+          
       - name: Run SonarQube scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
+            -Dsonar.login=$SONAR_TOKEN \
             -Dsonar.sources=. \
             -Dsonar.javascript.lcov.reportPaths=artifacts/frontend-artifacts/coverage/frontend/lcov.info \
             -Dsonar.python.coverage.reportPaths=artifacts/backend-artifacts/coverage.xml \
             -Dsonar.testExecutionReportPaths=merged-test-report.xml
+
 
