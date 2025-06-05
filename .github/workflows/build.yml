@@ -36,8 +36,7 @@ frontend:
           --ci \
           --coverage \
           --reporters=default \
-          --reporters=jest-junit \
-          --outputFile=junit.xml
+          --reporters=jest-junit
 
     - name: Prepare coverage artifacts
       run: |
