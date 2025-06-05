@@ -48,19 +48,19 @@ frontend:
       run: |
         mkdir -p tests/reports
         if [ ! -f tests/reports/frontend-test-report.xml ]; then
-          cat > frontend-test-report.xml << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<testExecutions version="1">
-  <file path="tests/js/conversation.test.js">
-    <testCase name="conversationTree structure tests" duration="1"/>
-  </file>
-  <file path="tests/js/chat-bot-component.test.js">
-    <testCase name="ChatBotComponent tests" duration="1"/>
-  </file>
-</testExecutions>
-EOF
-          cp frontend-test-report.xml tests/reports/
-        fi
+          cat > frontend-test-report.xml <<EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <testExecutions version="1">
+          <file path="tests/js/conversation.test.js">
+            <testCase name="conversationTree structure tests" duration="1"/>
+          </file>
+          <file path="tests/js/chat-bot-component.test.js">
+            <testCase name="ChatBotComponent tests" duration="1"/>
+          </file>
+        </testExecutions>
+        EOF
+              cp frontend-test-report.xml tests/reports/
+            fi
 
     - name: Upload frontend artifacts
       uses: actions/upload-artifact@v4
