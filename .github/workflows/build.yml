@@ -21,10 +21,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install pytest pytest-cov lxml
-          pip install fastapi uvicorn python-dotenv pydantic requests mistralai
-          pip install pytest-xdist pytest-asyncio httpx
+          - pip install pytest pytest-cov
+          - pip install fastapi uvicorn python-dotenv pydantic requests pytz
+          - pip install httpx aiohttp
+          - pip install mistralai==0.0.7
+          - pip install pytest-mock pytest-asyncio
+          - export MISTRAL_API_KEY=${MISTRAL_API_KEY}
+
 
       - name: Run tests and generate coverage
         run: |
