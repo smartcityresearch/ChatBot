@@ -79,22 +79,14 @@ jobs:
         with:
           name: test-reports
 
-      # Install SonarScanner CLI manually (if you use self-hosted SonarQube)
-      - name: Install SonarScanner CLI
-        run: |
-          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-          unzip sonar-scanner-cli-4.8.0.2856-linux.zip
-          echo "SONAR_SCANNER=$PWD/sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner" >> $GITHUB_ENV
-          export PATH=$PATH:$PWD/sonar-scanner-4.8.0.2856-linux/bin
-
       - name: Run SonarQube Scanner
+      - uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          $SONAR_SCANNER \
-            -Dsonar.sources=. \
-            -Dsonar.tests=tests \
-            -Dsonar.host.url=<your_sonarqube_server_url> \
-            -Dsonar.login=$SONAR_TOKEN \
-            -Dsonar.python.coverage.reportPaths=coverage.xml \
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.sources=. 
+            -Dsonar.tests=tests
+            -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.testExecutionReportPaths=sonar-test-report.xml
