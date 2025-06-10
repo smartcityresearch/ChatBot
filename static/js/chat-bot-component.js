@@ -2404,5 +2404,3 @@ flex-direction: row;
 }
 
 customElements.define("chat-bot-component", ChatBotComponent);
-
-export { ChatBotComponent };
