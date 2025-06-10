@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="45" failures="0" errors="0" time="1.131">
+  <testsuite name="ChatBotComponent" errors="0" failures="0" skipped="0" timestamp="2025-06-05T11:36:25" time="0.352" tests="14">
+    <testcase classname="ChatBotComponent initializes with default message" name="ChatBotComponent initializes with default message" time="0.001">
+    </testcase>
+    <testcase classname="ChatBotComponent togglePopup toggles popup state" name="ChatBotComponent togglePopup toggles popup state" time="0">
+    </testcase>
+    <testcase classname="ChatBotComponent toggleRecommendedQuestions toggles state" name="ChatBotComponent toggleRecommendedQuestions toggles state" time="0.001">
+    </testcase>
+    <testcase classname="ChatBotComponent extractLocation finds location in string" name="ChatBotComponent extractLocation finds location in string" time="0">
+    </testcase>
+    <testcase classname="ChatBotComponent DataProcessor.parseValue parses numbers" name="ChatBotComponent DataProcessor.parseValue parses numbers" time="0.001">
+    </testcase>
+    <testcase classname="ChatBotComponent DataProcessor.aggregateData returns temperature" name="ChatBotComponent DataProcessor.aggregateData returns temperature" time="0.001">
+    </testcase>
+    <testcase classname="DataProcessor additional functions findMode should return the most common value" name="DataProcessor additional functions findMode should return the most common value" time="0.001">
+    </testcase>
+    <testcase classname="DataProcessor additional functions calculateAverage should calculate correctly" name="DataProcessor additional functions calculateAverage should calculate correctly" time="0.003">
+    </testcase>
+    <testcase classname="DataProcessor additional functions aggregateData with max, min, and avg methods" name="DataProcessor additional functions aggregateData with max, min, and avg methods" time="0.003">
+    </testcase>
+    <testcase classname="DataProcessor additional functions aggregateData ignores special properties" name="DataProcessor additional functions aggregateData ignores special properties" time="0.001">
+    </testcase>
+    <testcase classname="DataProcessor additional functions aggregateData handles string values correctly" name="DataProcessor additional functions aggregateData handles string values correctly" time="0.001">
+    </testcase>
+    <testcase classname="Utility functions Levenshtein distance calculation" name="Utility functions Levenshtein distance calculation" time="0">
+    </testcase>
+    <testcase classname="Utility functions Node color generation" name="Utility functions Node color generation" time="0">
+    </testcase>
+    <testcase classname="API Communication API calls use correct endpoint and format" name="API Communication API calls use correct endpoint and format" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="conversationTree structure" errors="0" failures="0" skipped="0" timestamp="2025-06-05T11:36:25" time="0.13" tests="21">
+    <testcase classname="conversationTree structure should have root level properties (message, options, nodes)" name="conversationTree structure should have root level properties (message, options, nodes)" time="0.002">
+    </testcase>
+    <testcase classname="conversationTree structure should have valid options with next property" name="conversationTree structure should have valid options with next property" time="0.001">
+    </testcase>
+    <testcase classname="conversationTree structure should have an AskQuestionNode with required properties" name="conversationTree structure should have an AskQuestionNode with required properties" time="0.001">
+    </testcase>
+    <testcase classname="conversationTree structure should have a BuildingNode with valid options structure" name="conversationTree structure should have a BuildingNode with valid options structure" time="0.003">
+    </testcase>
+    <testcase classname="conversationTree structure should have CommonBuildingNode with building options" name="conversationTree structure should have CommonBuildingNode with building options" time="0.001">
+    </testcase>
+    <testcase classname="conversationTree structure should have VerticalNode with same verticals as BuildingNode" name="conversationTree structure should have VerticalNode with same verticals as BuildingNode" time="0.001">
+    </testcase>
+    <testcase classname="conversationTree structure should have CommonVerticalNode with aggregation options" name="conversationTree structure should have CommonVerticalNode with aggregation options" time="0">
+    </testcase>
+    <testcase classname="conversationTree structure should have ConversationalModeOptions with valid structure" name="conversationTree structure should have ConversationalModeOptions with valid structure" time="0">
+    </testcase>
+    <testcase classname="conversationTree structure should have a ProcessQuestionNode with process method" name="conversationTree structure should have a ProcessQuestionNode with process method" time="0.001">
+    </testcase>
+    <testcase classname="conversationTree structure should have MainMenu with same options as root" name="conversationTree structure should have MainMenu with same options as root" time="0.001">
+    </testcase>
+    <testcase classname="conversationTree structure should have ExitChatNode with option to return to MainMenu" name="conversationTree structure should have ExitChatNode with option to return to MainMenu" time="0.002">
+    </testcase>
+    <testcase classname="extractMessages function should extract messages from conversationTree" name="extractMessages function should extract messages from conversationTree" time="0.002">
+    </testcase>
+    <testcase classname="extractMessages function should handle missing message property" name="extractMessages function should handle missing message property" time="0">
+    </testcase>
+    <testcase classname="extractMessages function should handle empty tree" name="extractMessages function should handle empty tree" time="0">
+    </testcase>
+    <testcase classname="ProcessQuestionNode.process method should call fetch with correct parameters" name="ProcessQuestionNode.process method should call fetch with correct parameters" time="0">
+    </testcase>
+    <testcase classname="ProcessQuestionNode.process method should return response from API" name="ProcessQuestionNode.process method should return response from API" time="0">
+    </testcase>
+    <testcase classname="ProcessQuestionNode.process method should handle fetch error" name="ProcessQuestionNode.process method should handle fetch error" time="0.026">
+    </testcase>
+    <testcase classname="ProcessQuestionNode.process method should handle non-ok response" name="ProcessQuestionNode.process method should handle non-ok response" time="0">
+    </testcase>
+    <testcase classname="Conversation tree navigation paths should have valid path from root to BuildingNode to CommonBuildingNode" name="Conversation tree navigation paths should have valid path from root to BuildingNode to CommonBuildingNode" time="0.001">
+    </testcase>
+    <testcase classname="Conversation tree navigation paths should have valid path from root to AskQuestionNode to ProcessQuestionNode" name="Conversation tree navigation paths should have valid path from root to AskQuestionNode to ProcessQuestionNode" time="0.001">
+    </testcase>
+    <testcase classname="Conversation tree navigation paths should have valid path to exit chat and return to menu" name="Conversation tree navigation paths should have valid path to exit chat and return to menu" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ChatBotComponent" errors="0" failures="0" skipped="0" timestamp="2025-06-05T11:36:26" time="0.08" tests="6">
+    <testcase classname="ChatBotComponent initializes with default message" name="ChatBotComponent initializes with default message" time="0.002">
+    </testcase>
+    <testcase classname="ChatBotComponent togglePopup toggles popup state" name="ChatBotComponent togglePopup toggles popup state" time="0">
+    </testcase>
+    <testcase classname="ChatBotComponent toggleRecommendedQuestions toggles state" name="ChatBotComponent toggleRecommendedQuestions toggles state" time="0">
+    </testcase>
+    <testcase classname="ChatBotComponent extractLocation finds location in string" name="ChatBotComponent extractLocation finds location in string" time="0">
+    </testcase>
+    <testcase classname="ChatBotComponent DataProcessor.parseValue parses numbers" name="ChatBotComponent DataProcessor.parseValue parses numbers" time="0.001">
+    </testcase>
+    <testcase classname="ChatBotComponent DataProcessor.aggregateData returns temperature" name="ChatBotComponent DataProcessor.aggregateData returns temperature" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Conversation module" errors="0" failures="0" skipped="0" timestamp="2025-06-05T11:36:26" time="0.088" tests="4">
+    <testcase classname="Conversation module conversationTree has main message" name="Conversation module conversationTree has main message" time="0.001">
+    </testcase>
+    <testcase classname="Conversation module conversationTree has options array" name="Conversation module conversationTree has options array" time="0">
+    </testcase>
+    <testcase classname="Conversation module conversationTree has nodes object" name="Conversation module conversationTree has nodes object" time="0">
+    </testcase>
+    <testcase classname="Conversation module extractMessages function works" name="Conversation module extractMessages function works" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>
