@@ -2051,7 +2051,9 @@ flex-direction: row;
     ];
 
     // Use a simple hash to consistently map nodeId to a color
-    const colorIndex = parseInt(nodeId.replace(/\D/g, '')) % colors.length;
+    let colorIndex = parseInt(nodeId.replace(/\D/g, ''));
+    if (isNaN(colorIndex)) colorIndex = 0;
+    colorIndex = colorIndex % colors.length;
     return colors[colorIndex];
   }
 

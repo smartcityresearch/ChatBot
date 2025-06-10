@@ -1,7 +1,7 @@
 import json
 import requests
 import os
-from fastapi import FastAPI, Query, Body
+from fastapi import FastAPI, Query, Body, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
@@ -469,13 +469,13 @@ def extract_response_data(response_text):
     is_temporal, time_period = extract_temporal_info(response_text)
     classification = extract_classification(response_text)
     node_ids = extract_node_ids(response_text)
-
-    return {
+    # Defensive: always return a dict with required keys
+    return fill_missing_fields({
         "classification": classification,
         "node_ids": node_ids,
         "is_temporal": is_temporal,
         "time_period": time_period
-    }
+    })
 
 # Function to fetch data from the API for a specific node ID
 def fetch_node_data(node_id):
@@ -625,170 +625,150 @@ IMPORTANT:
     return response.choices[0].message.content
 # Main function to handle user queries
 def process_query(user_query):
-    
-    if detect_average_query(user_query):
-        # Extract parameter if mentioned in the query
-        parameter = extract_parameter_from_query(user_query)
-        
-        # Fetch average data
-        avg_data = fetch_average_data()
-        
-        # Generate response based on average data
-        response = generate_average_response(user_query, avg_data, parameter)
-        
-        # Return a simplified result structure for average queries
-        return {
-            "classification": "AVERAGE",
-            "node_ids": [],
-            "node_data": avg_data,
-            "response": response,
-            "is_temporal": False,
-            "time_period": None,
-            "parameter": parameter
-        }
-    if detect_status_query(user_query):
-        prompts = load_prompt_files()
-        system_prompt = prepare_system_prompt(prompts)
-        response = query_mistral_classification(system_prompt, user_query)
-        response_data = extract_response_data(response)
-        
-        # Get node IDs from the classification
-        node_ids = response_data.get("node_ids", [])
-        
-        # If no node IDs found, try to extract from the query
-        if not node_ids:
-            # You might want to implement a method to extract node IDs from the query
-            # For now, we'll return a generic response if no node IDs are found
+    # Defensive: Raise on empty or invalid input
+    if not user_query or not isinstance(user_query, str) or not user_query.strip():
+        raise ValueError("Query cannot be empty or invalid.")
+
+    try:
+        if detect_average_query(user_query):
+            parameter = extract_parameter_from_query(user_query)
+            try:
+                avg_data = fetch_average_data()
+            except Exception as e:
+                # Return error as response, not as exception
+                return {
+                    "classification": "AVERAGE",
+                    "node_ids": [],
+                    "node_data": {},
+                    "response": f"Error: {str(e)}",
+                    "is_temporal": False,
+                    "time_period": None,
+                    "parameter": parameter
+                }
+            response = generate_average_response(user_query, avg_data, parameter)
+            return {
+                "classification": "AVERAGE",
+                "node_ids": [],
+                "node_data": avg_data,
+                "response": response,
+                "is_temporal": False,
+                "time_period": None,
+                "parameter": parameter
+            }
+
+        if detect_status_query(user_query):
+            prompts = load_prompt_files()
+            system_prompt = prepare_system_prompt(prompts)
+            response = query_mistral_classification(system_prompt, user_query)
+            response_data = extract_response_data(response)
+            node_ids = response_data.get("node_ids", [])
+            if not node_ids:
+                return {
+                    "classification": "NODE_STATUS",
+                    "node_ids": [],
+                    "node_data": {},
+                    "response": "I couldn't identify specific nodes to check the status for. Please provide specific node IDs.",
+                    "is_temporal": False,
+                    "time_period": None
+                }
+            try:
+                natural_response = generate_node_status_response(node_ids)
+                node_data = {node_id: fetch_node_status(node_id) for node_id in node_ids}
+            except Exception as e:
+                return {
+                    "classification": "NODE_STATUS",
+                    "node_ids": node_ids,
+                    "node_data": {},
+                    "response": f"Error: {str(e)}",
+                    "is_temporal": False,
+                    "time_period": None
+                }
             return {
                 "classification": "NODE_STATUS",
-                "node_ids": [],
-                "node_data": {},
-                "response": "I couldn't identify specific nodes to check the status for. Please provide specific node IDs.",
+                "node_ids": node_ids,
+                "node_data": node_data,
+                "response": natural_response,
                 "is_temporal": False,
                 "time_period": None
             }
-        
-        # Generate response for node status
-        natural_response = generate_node_status_response(node_ids)
-        
-        # Return result structure
-        return {
-            "classification": "NODE_STATUS",
+
+        prompts = load_prompt_files()
+        system_prompt = prepare_system_prompt(prompts)
+        try:
+            response = query_mistral_classification(system_prompt, user_query)
+        except Exception as e:
+            return {
+                "classification": "UNKNOWN",
+                "node_ids": [],
+                "node_data": {},
+                "response": f"Error: {str(e)}",
+                "is_temporal": False,
+                "time_period": None
+            }
+        response_data = extract_response_data(response) or {}
+        is_temporal = response_data.get("is_temporal", False)
+        time_period = response_data.get("time_period")
+        if not is_temporal:
+            regex_is_temporal, regex_time_period = detect_temporal_query(user_query)
+            if regex_is_temporal:
+                is_temporal = True
+                time_period = regex_time_period
+        node_ids = response_data.get("node_ids", [])
+        classification = response_data.get("classification", "UNKNOWN")
+        # Defensive: always return a string for classification
+        if classification is None:
+            classification = "UNKNOWN"
+        try:
+            if is_temporal and time_period:
+                node_data = fetch_historical_data(node_ids, time_period)
+                response_node_data = node_data
+            else:
+                node_data = fetch_all_node_data(node_ids)
+                response_node_data = node_data
+        except Exception as e:
+            return {
+                "classification": classification,
+                "node_ids": node_ids,
+                "node_data": {},
+                "response": f"Error: {str(e)}",
+                "is_temporal": is_temporal,
+                "time_period": time_period
+            }
+        try:
+            natural_response = generate_response(
+                prompts,
+                classification,
+                user_query,
+                response_node_data,
+                is_temporal=is_temporal,
+                time_period=time_period
+            )
+        except Exception as e:
+            natural_response = f"Error: {str(e)}"
+        result = {
+            "classification": classification,
             "node_ids": node_ids,
-            "node_data": {node_id: fetch_node_status(node_id) for node_id in node_ids},
+            "node_data": node_data,
             "response": natural_response,
+            "is_temporal": is_temporal,
+            "time_period": time_period
+        }
+        if is_temporal:
+            try:
+                result["todays_data"] = fetch_todays_data(node_ids)
+            except Exception:
+                result["todays_data"] = {}
+        return result
+    except Exception as e:
+        # Defensive: always return a dict with a string response
+        return {
+            "classification": "UNKNOWN",
+            "node_ids": [],
+            "node_data": {},
+            "response": f"Error: {str(e)}",
             "is_temporal": False,
             "time_period": None
         }
-    
-    prompts = load_prompt_files()
-    system_prompt = prepare_system_prompt(prompts)
-    response = query_mistral_classification(system_prompt, user_query)
-    response_data = extract_response_data(response)
-    
-    # Check if the query is temporal (both from LLM and regex)
-    is_temporal = response_data.get("is_temporal", False)
-    time_period = response_data.get("time_period")
-    
-    # Double-check with regex if LLM didn't detect temporal query
-    if not is_temporal:
-        regex_is_temporal, regex_time_period = detect_temporal_query(user_query)
-        if regex_is_temporal:
-            is_temporal = True
-            time_period = regex_time_period
-    
-    # Fetch data for the identified node IDs
-    node_ids = response_data["node_ids"]
-    
-    # Fetch the appropriate data based on whether it's a temporal query
-    if is_temporal and time_period:
-        node_data = fetch_historical_data(node_ids, time_period)
-        # Include today's data in the response structure but it will be fetched in generate_response
-        response_node_data = node_data
-    else:
-        node_data = fetch_all_node_data(node_ids)
-        response_node_data = node_data
-    
-    # Generate natural language response based on classification
-    classification = response_data["classification"]
-    natural_response = generate_response(
-        prompts, 
-        classification, 
-        user_query, 
-        response_node_data,
-        is_temporal=is_temporal, 
-        time_period=time_period
-    )
-    
-    # Combine all results
-    result = {
-        "classification": classification,
-        "node_ids": node_ids,
-        "node_data": node_data,
-        "response": natural_response,
-        "is_temporal": is_temporal,
-        "time_period": time_period
-    }
-    
-    # Add today's data for temporal queries
-    if is_temporal:
-        result["todays_data"] = fetch_todays_data(node_ids)
-    
-    return result
-# Add function to generate response for average queries
-def generate_average_response(user_query, avg_data, parameter=None):
-    # Handle case where API call failed
-    if "error" in avg_data:
-        return f"Sorry, I couldn't retrieve the average data. {avg_data['error']}"
-    
-    # Prepare system prompt for concise response
-    prompt = f"""
-You are a smart city assistant providing extremely concise answers (2-3 lines maximum).
-The user has asked about average sensor readings: "{user_query}"
-
-Here is the current average data across all sensor nodes:
-{json.dumps(avg_data, indent=2)}
-"""
-    
-    # Add specific instructions based on whether a parameter was detected
-    if parameter:
-        # Find which vertical (aq, solar, etc.) contains this parameter
-        vertical_with_param = None
-        param_value = None
-        
-        for vertical, data in avg_data.items():
-            if isinstance(data, dict) and parameter in data:
-                vertical_with_param = vertical
-                param_value = data[parameter]
-                break
-        
-        if vertical_with_param and param_value:
-            prompt += f"\nThe user specifically asked about the '{parameter}' parameter, which has an average value of {param_value} across all {vertical_with_param} nodes. Focus your response on this specific parameter."
-        else:
-            prompt += f"\nThe user asked about the '{parameter}' parameter, but it wasn't found in the data. Mention this in your response."
-    else:
-        prompt += "\nThe user didn't specify a particular parameter. Provide a brief overview of key parameters from the data."
-    
-    prompt += "\nIMPORTANT: Your response must be ONLY 2-3 lines maximum. Be direct and concise with the most important information. Format all units correctly in your response."
-    
-    # Query Mistral for the response
-    messages = [
-        ChatMessage(role="system", content="You are a smart city assistant providing extremely concise answers (2-3 lines maximum). Always format units correctly, especially temperature with the proper degree symbol '°C' (Unicode U+00B0)."),
-        ChatMessage(role="user", content=prompt)
-    ]
-    
-    response = client.chat(
-        model="mistral-large-latest",
-        messages=messages
-    )
-    
-    # Fix encoding issues in the response
-    response_text = response.choices[0].message.content
-    response_text = response_text.replace("Â°C", "°C")
-    response_text = response_text.replace("Â°F", "°F")
-    
-    return response_text
-
 # Load prompts at startup
 prompts = load_prompt_files()
 
@@ -803,26 +783,62 @@ async def query_get(q: str = Query(..., description="User query about smart city
     """
     Process a natural language query about smart city data via GET request
     """
-    result = process_query(q)
-    return result
+    if not q or not q.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Query cannot be empty.")
+    try:
+        result = process_query(q)
+        return result
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # New POST endpoint that returns only the response text
 @app.post("/query", response_model=SimpleResponse)
 async def query_post(request: QueryRequest):
-    """
-    Process a natural language query about smart city data and return only the response text
-    """
-    result = process_query(request.query)
-    return {"response": result["response"]}
+    if not request.query or not request.query.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Query cannot be empty.")
+    try:
+        result = process_query(request.query)
+        # Defensive: always return a string for response
+        response_text = result.get("response", "")
+        if not isinstance(response_text, str):
+            response_text = str(response_text)
+        return {"response": response_text}
+    except Exception as e:
+        # Always return 200 with error in response for most errors
+        return {"response": f"Error: {str(e)}"}
 
-# Original POST endpoint (renamed to /query/full for backward compatibility)
 @app.post("/query/full", response_model=QueryResponse)
 async def query_post_full(request: QueryRequest):
-    """
-    Process a natural language query about smart city data via POST request (full response)
-    """
-    result = process_query(request.query)
-    return result
+    if not request.query or not request.query.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Query cannot be empty.")
+    try:
+        result = process_query(request.query)
+        # Defensive: fill missing fields for QueryResponse
+        if "classification" not in result or result["classification"] is None:
+            result["classification"] = "UNKNOWN"
+        if "node_ids" not in result or result["node_ids"] is None:
+            result["node_ids"] = []
+        if "node_data" not in result or result["node_data"] is None:
+            result["node_data"] = {}
+        if "response" not in result or result["response"] is None:
+            result["response"] = ""
+        if "is_temporal" not in result or result["is_temporal"] is None:
+            result["is_temporal"] = False
+        if "time_period" not in result:
+            result["time_period"] = None
+        return result
+    except Exception as e:
+        # Defensive: always return a valid QueryResponse with error string
+        return {
+            "classification": "UNKNOWN",
+            "node_ids": [],
+            "node_data": {},
+            "response": f"Error: {str(e)}",
+            "is_temporal": False,
+            "time_period": None
+        }
 
 # Support both GET and POST for debug endpoint
 @app.get("/debug", response_model=dict)

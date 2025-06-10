@@ -14,9 +14,6 @@ describe('ChatBotComponent', () => {
       if (id === 'chat-pop') return {
         classList: { add: jest.fn(), remove: jest.fn(), contains: jest.fn() }
       };
-      if (id === 'popup') return {
-        classList: { add: jest.fn(), remove: jest.fn(), contains: jest.fn() }
-      };
       if (id === 'message-container') return {
         innerHTML: '',
         appendChild: jest.fn(),
@@ -24,14 +21,17 @@ describe('ChatBotComponent', () => {
         scrollHeight: 100,
         classList: { add: jest.fn(), remove: jest.fn(), contains: jest.fn() }
       };
-      if (id === 'visualization-modal') return { classList: { add: jest.fn() }, addEventListener: jest.fn() };
-      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })) };
+      // Always return a stub for visualization-modal (never null!)
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
       if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
       if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
       if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
-      if (id && id.startsWith('visualizeIcon_')) return { parentNode: { replaceChild: jest.fn() }, cloneNode: jest.fn(() => ({ addEventListener: jest.fn() })) };
-      if (id && id.startsWith('indoorButton_')) return { addEventListener: jest.fn() };
-      if (id && id.startsWith('outdoorButton_')) return { addEventListener: jest.fn() };
       return {};
     });
     component.shadowRoot.querySelector = jest.fn(() => ({
@@ -343,5 +343,232 @@ describe('DataProcessor', () => {
     expect(typeof processor.aggregateData('min').temperature).toBe('string');
     expect(processor.aggregateData('mode')).toHaveProperty('temperature');
     expect(typeof processor.aggregateData('mode').temperature).toBe('string');
+  });
+});
+
+describe('ChatBotComponent additional coverage', () => {
+  let component;
+
+  beforeEach(() => {
+    component = new ChatBotComponent();
+    component.shadowRoot = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'chat-pop') return {
+        classList: { add: jest.fn(), remove: jest.fn(), contains: jest.fn() }
+      };
+      if (id === 'message-container') return {
+        innerHTML: '',
+        appendChild: jest.fn(),
+        scrollTop: 0,
+        scrollHeight: 100,
+        classList: { add: jest.fn(), remove: jest.fn(), contains: jest.fn() }
+      };
+      // Always return a stub for visualization-modal (never null!)
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    component.shadowRoot.querySelector = jest.fn(() => ({
+      value: '',
+      focus: jest.fn()
+    }));
+    component.shadowRoot.removeChild = jest.fn();
+    component.messages = [];
+    component.currentOptions = [];
+    component.userInput = '';
+    component.editingMessageIndex = -1;
+    component.editedMessage = '';
+    component.recommendedQuestions = [];
+    component.showRecommendedQuestions = false;
+    component.conversationOptions = [];
+    component.currentChart = null;
+    component.requestUpdate = jest.fn();
+  });
+
+  test('cancelEditMessage calls requestUpdate', () => {
+    const spy = jest.spyOn(component, 'requestUpdate');
+    component.cancelEditMessage();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('scrollToBottom does nothing if container is missing', () => {
+    component.shadowRoot.getElementById = jest.fn(() => null);
+    expect(() => component.scrollToBottom()).not.toThrow();
+  });
+
+  test('togglePopup closes popup', () => {
+    component.popupActive = true;
+    const popup = { classList: { add: jest.fn(), remove: jest.fn() } };
+    component.shadowRoot.getElementById = jest.fn(() => popup);
+    component.togglePopup();
+    expect(popup.classList.remove).toHaveBeenCalledWith('active');
+  });
+
+  test('togglePopup opens popup and populates messages', () => {
+    component.popupActive = false;
+    const popup = { classList: { add: jest.fn(), remove: jest.fn() } };
+    component.shadowRoot.getElementById = jest.fn(() => popup);
+    component.populateMessages = jest.fn();
+    component.togglePopup();
+    expect(popup.classList.add).toHaveBeenCalledWith('active');
+    expect(component.populateMessages).toHaveBeenCalled();
+  });
+
+  test('handleOptionSelection with no option calls addMessage with error', async () => {
+    component.currentOptions = [];
+    component.messages = [{ text: 'last correct', sender: 'bot' }];
+    component.lastCorrectMessageIndex = 0;
+    component.addMessage = jest.fn();
+    await component.handleOptionSelection('notfound');
+    expect(component.addMessage).toHaveBeenCalledWith('Error: Invalid option selected', 'bot');
+    expect(component.addMessage).toHaveBeenCalledWith('last correct', 'bot');
+  });
+
+  test('populateMessages adds edit icon for user', () => {
+    component.messages = [{ text: 'User', sender: 'user' }];
+    component.editingMessageIndex = -1;
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('populateMessages handles empty messages', () => {
+    component.messages = [];
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('populateMessages handles visualization icon with missing icon part', () => {
+    component.messages = [{ text: 'Bot\n\n<div id="', sender: 'bot' }];
+    component.editingMessageIndex = -1;
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('getNodeColor returns color for non-numeric nodeId', () => {
+    expect(typeof component.getNodeColor('abc')).toBe('string');
+  });
+
+  test('extractTemporalData handles missing filtered_data', () => {
+    const data = { node_data: { 'aq-01': {} } };
+    expect(component.extractTemporalData(data)).toEqual({});
+  });
+
+  test('extractCurrentData handles missing categories', () => {
+    const data = { node_data: { 'aq-01': {} } };
+    expect(component.extractCurrentData(data)).toEqual({});
+  });
+
+  test('sendMessageToBackend handles error', async () => {
+    global.fetch = jest.fn(() => { throw new Error('fail'); });
+    const response = await component.sendMessageToBackend('test');
+    expect(response).toContain('Sorry');
+  });
+
+  test('sendMessageToBackend handles non-json header', async () => {
+    global.fetch = jest.fn(() => Promise.resolve({ headers: { get: () => null }, json: async () => ({}) }));
+    const response = await component.sendMessageToBackend('test');
+    expect(response).toContain('unexpected response format');
+  });
+
+  test('openVisualizationModal destroys chart if exists', async () => {
+    component.currentChart = { destroy: jest.fn() };
+    component.shadowRoot.appendChild = jest.fn();
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    global.fetch = jest.fn(() => Promise.resolve({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        is_temporal: true,
+        node_data: {
+          'node1': {
+            filtered_data: {
+              cat: { data: [{ timestamp: Date.now(), temperature: 25, node_id: 'node1' }] }
+            }
+          }
+        }
+      })
+    }));
+    await expect(component.openVisualizationModal('test')).resolves.toBeUndefined();
+  });
+
+  test('openVisualizationModal handles no matching parameter', async () => {
+    component.shadowRoot.appendChild = jest.fn();
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    global.fetch = jest.fn(() => Promise.resolve({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        is_temporal: false,
+        node_data: { 'node1': { category1: [{ name: 'N1' }] } }
+      })
+    }));
+    await expect(component.openVisualizationModal('temperature')).resolves.toBeUndefined();
+  });
+
+  test('openVisualizationModal handles fetch error', async () => {
+    component.shadowRoot.appendChild = jest.fn();
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    global.fetch = jest.fn(() => { throw new Error('fail'); });
+    await expect(component.openVisualizationModal('temperature')).resolves.toBeUndefined();
+  });
+
+  test('handleRecommendedQuestion calls sendMessage', async () => {
+    component.sendMessage = jest.fn();
+    await component.handleRecommendedQuestion('Q?');
+    expect(component.sendMessage).toHaveBeenCalled();
+  });
+
+  test('handleConversationOption calls sendMessage', async () => {
+    component.sendMessage = jest.fn();
+    await component.handleConversationOption('option');
+    expect(component.sendMessage).toHaveBeenCalled();
   });
 });
