@@ -566,6 +566,312 @@ describe('ChatBotComponent additional coverage', () => {
     expect(component.sendMessage).toHaveBeenCalled();
   });
 
+  test('handleConversationOption sets userInput and clears conversationOptions', async () => {
+    component.conversationOptions = [{ text: 'option', next: 'next' }];
+    component.sendMessage = jest.fn();
+    await component.handleConversationOption('option');
+    expect(component.userInput).toBe('option');
+    expect(component.conversationOptions).toEqual([]);
+    expect(component.sendMessage).toHaveBeenCalled();
+  });
+
+  test('handleConversationOption with no option still sets userInput', async () => {
+    component.conversationOptions = [];
+    component.sendMessage = jest.fn();
+    await component.handleConversationOption('option');
+    expect(component.userInput).toBe('option');
+    expect(component.conversationOptions).toEqual([]);
+    expect(component.sendMessage).toHaveBeenCalled();
+  });
+
+  test('handleOptionSelection finds option and sets userInput', async () => {
+    component.currentOptions = [{ text: '1', next: 'test' }];
+    component.sendMessage = jest.fn();
+    await component.handleOptionSelection('1');
+    expect(component.userInput).toBe('1');
+    expect(component.sendMessage).toHaveBeenCalled();
+  });
+
+  test('handleOptionSelection with invalid option adds error messages', async () => {
+    component.currentOptions = [{ text: '2', next: 'test' }];
+    component.messages = [{ text: 'last correct', sender: 'bot' }];
+    component.lastCorrectMessageIndex = 0;
+    component.addMessage = jest.fn();
+    await component.handleOptionSelection('notfound');
+    expect(component.addMessage).toHaveBeenCalledWith('Error: Invalid option selected', 'bot');
+    expect(component.addMessage).toHaveBeenCalledWith('last correct', 'bot');
+  });
+
+  test('startEditMessage does nothing for bot message', () => {
+    component.messages = [{ text: 'Bot', sender: 'bot' }];
+    component.editingMessageIndex = -1;
+    component.startEditMessage(0);
+    expect(component.editingMessageIndex).toBe(-1);
+  });
+
+  test('saveEditedMessage does nothing if editedMessage is empty', async () => {
+    component.editingMessageIndex = 0;
+    component.editedMessage = '   ';
+    component.populateMessages = jest.fn();
+    await component.saveEditedMessage();
+    expect(component.populateMessages).not.toHaveBeenCalled();
+  });
+
+  test('scrollToBottom scrolls if container exists', () => {
+    const container = { scrollTop: 0, scrollHeight: 100 };
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    component.scrollToBottom();
+    expect(container.scrollTop).toBe(100);
+  });
+
+  test('togglePopup adds/removes active class', () => {
+    const popup = { classList: { add: jest.fn(), remove: jest.fn() } };
+    component.shadowRoot.getElementById = jest.fn(() => popup);
+    component.popupActive = false;
+    component.populateMessages = jest.fn();
+    component.togglePopup();
+    expect(popup.classList.add).toHaveBeenCalledWith('active');
+    component.togglePopup();
+    expect(popup.classList.remove).toHaveBeenCalledWith('active');
+  });
+
+  test('toggleRecommendedQuestions toggles and calls requestUpdate', () => {
+    component.requestUpdate = jest.fn();
+    const initial = component.showRecommendedQuestions;
+    component.toggleRecommendedQuestions();
+    expect(component.showRecommendedQuestions).toBe(!initial);
+    expect(component.requestUpdate).toHaveBeenCalled();
+  });
+
+  test('addMessage pushes message and calls populateMessages', () => {
+    component.messages = [];
+    component.populateMessages = jest.fn();
+    component.addMessage('test', 'user');
+    expect(component.messages[0]).toEqual({ text: 'test', sender: 'user' });
+    expect(component.populateMessages).toHaveBeenCalled();
+  });
+
+  test('resetInputAndPopulateMessages resets userInput and calls populateMessages', () => {
+    component.userInput = 'abc';
+    component.populateMessages = jest.fn();
+    component.resetInputAndPopulateMessages();
+    expect(component.userInput).toBe('');
+    expect(component.populateMessages).toHaveBeenCalled();
+  });
+
+  test('populateMessages handles all message types', () => {
+    component.messages = [
+      { text: 'Bot', sender: 'bot' },
+      { text: 'User', sender: 'user' },
+      { text: 'Bot\n\n<div id="viz" class="visualization-icon"></div>', sender: 'bot' }
+    ];
+    component.editingMessageIndex = -1;
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('populateMessages handles editing state for user', () => {
+    component.messages = [{ text: 'User', sender: 'user' }];
+    component.editingMessageIndex = 0;
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('populateMessages handles empty messages', () => {
+    component.messages = [];
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('populateMessages handles visualization icon with missing icon part', () => {
+    component.messages = [{ text: 'Bot\n\n<div id="', sender: 'bot' }];
+    component.editingMessageIndex = -1;
+    const container = document.createElement('div');
+    component.shadowRoot.getElementById = jest.fn(() => container);
+    expect(() => component.populateMessages()).not.toThrow();
+  });
+
+  test('getNodeColor returns color for numeric and non-numeric nodeId', () => {
+    expect(typeof component.getNodeColor('123')).toBe('string');
+    expect(typeof component.getNodeColor('abc')).toBe('string');
+  });
+
+  test('extractTemporalData returns empty object if no filtered_data', () => {
+    const data = { node_data: { 'aq-01': {} } };
+    expect(component.extractTemporalData(data)).toEqual({});
+  });
+
+  test('extractCurrentData returns empty object if no categories', () => {
+    const data = { node_data: { 'aq-01': {} } };
+    expect(component.extractCurrentData(data)).toEqual({});
+  });
+
+  test('sendMessageToBackend handles fetch error', async () => {
+    global.fetch = jest.fn(() => { throw new Error('fail'); });
+    const response = await component.sendMessageToBackend('test');
+    expect(response).toContain('Sorry');
+  });
+
+  test('sendMessageToBackend handles non-json header', async () => {
+    global.fetch = jest.fn(() => Promise.resolve({ headers: { get: () => null }, json: async () => ({}) }));
+    const response = await component.sendMessageToBackend('test');
+    expect(response).toContain('unexpected response format');
+  });
+
+  test('openVisualizationModal destroys chart if exists', async () => {
+    component.currentChart = { destroy: jest.fn() };
+    component.shadowRoot.appendChild = jest.fn();
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'visualization-modal')
+        return { addEventListener: jest.fn(), classList: { add: jest.fn(), remove: jest.fn() }, style: { display: 'none' } };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    global.fetch = jest.fn(() => Promise.resolve({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        is_temporal: true,
+        node_data: {
+          'node1': {
+            filtered_data: {
+              cat: { data: [{ timestamp: Date.now(), temperature: 25, node_id: 'node1' }] }
+            }
+          }
+        }
+      })
+    }));
+    await expect(component.openVisualizationModal('test')).resolves.toBeUndefined();
+  });
+
+  test('openVisualizationModal handles no matching parameter', async () => {
+    component.shadowRoot.appendChild = jest.fn();
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    global.fetch = jest.fn(() => Promise.resolve({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        is_temporal: false,
+        node_data: { 'node1': { category1: [{ name: 'N1' }] } }
+      })
+    }));
+    await expect(component.openVisualizationModal('temperature')).resolves.toBeUndefined();
+  });
+
+  test('openVisualizationModal handles fetch error', async () => {
+    component.shadowRoot.appendChild = jest.fn();
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (id === 'visualization-modal') return {
+        addEventListener: jest.fn(),
+        classList: { add: jest.fn(), remove: jest.fn() },
+        style: { display: 'none' }
+      };
+      if (id === 'visualization-close') return { addEventListener: jest.fn() };
+      if (id === 'visualization-header') return {};
+      if (id === 'loading-spinner') return { style: { display: 'flex' } };
+      if (id === 'visualization-chart') return { getContext: jest.fn(() => ({ clearRect: jest.fn() })), style: { display: 'none' } };
+      if (id === 'error-message') return { style: { display: 'none' }, textContent: '' };
+      return {};
+    });
+    global.fetch = jest.fn(() => { throw new Error('fail'); });
+    await expect(component.openVisualizationModal('temperature')).resolves.toBeUndefined();
+  });
+
+  test('handleRecommendedQuestion calls sendMessage', async () => {
+    component.sendMessage = jest.fn();
+    await component.handleRecommendedQuestion('Q?');
+    expect(component.sendMessage).toHaveBeenCalled();
+  });
+
+  test('handleLocationButton handles location', async () => {
+    component.messages = [
+      { text: 'Bot', sender: 'bot' },
+      { text: '<div class="location-buttons"></div>', sender: 'bot' }
+    ];
+    component.sendMessageToBackend = jest.fn().mockResolvedValue('Location response');
+    component.populateMessages = jest.fn();
+    component.requestUpdate = jest.fn();
+    await component.handleLocationButton('Indoor');
+    expect(component.sendMessageToBackend).toHaveBeenCalled();
+    expect(component.populateMessages).toHaveBeenCalled();
+    expect(component.requestUpdate).toHaveBeenCalled();
+  });
+
+  test('handleLocationButton handles error', async () => {
+    component.messages = [
+      { text: 'Bot', sender: 'bot' },
+      { text: '<div class="location-buttons"></div>', sender: 'bot' }
+    ];
+    component.sendMessageToBackend = jest.fn(() => { throw new Error('fail'); });
+    component.populateMessages = jest.fn();
+    component.requestUpdate = jest.fn();
+    await component.handleLocationButton('Indoor');
+    expect(component.populateMessages).toHaveBeenCalled();
+    expect(component.requestUpdate).toHaveBeenCalled();
+  });
+
+  test('handleUserInput updates userInput', () => {
+    const event = { target: { value: 'test input' } };
+    component.handleUserInput(event);
+    expect(component.userInput).toBe('test input');
+  });
+
+  test('getLevenshteinDistance computes string distance', () => {
+    expect(component.getLevenshteinDistance('abc', 'abcd')).toBe(1);
+    expect(component.getLevenshteinDistance('', 'abc')).toBe(3);
+    expect(component.getLevenshteinDistance('abc', '')).toBe(3);
+    expect(component.getLevenshteinDistance('', '')).toBe(0);
+  });
+
+  test('extractLocation finds known locations', () => {
+    expect(component.extractLocation('Temperature at Vindhya')).toBe('Vindhya');
+    expect(component.extractLocation('Humidity in Kohli Block')).toBe('Kohli Block');
+    expect(component.extractLocation('Unknown location')).toBeUndefined();
+  });
+
+  test('handleKeyDown triggers sendMessage on Enter', async () => {
+    component.userInput = 'test';
+    const spy = jest.spyOn(component, 'sendMessage').mockResolvedValue();
+    const event = { key: 'Enter', preventDefault: jest.fn() };
+    await component.handleKeyDown(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('cancelEditMessage resets editing state', () => {
+    component.editingMessageIndex = 1;
+    component.editedMessage = 'test';
+    component.cancelEditMessage();
+    expect(component.editingMessageIndex).toBe(-1);
+    expect(component.editedMessage).toBe('');
+  });
+
+  test('cancelEditMessage calls requestUpdate', () => {
+    component.requestUpdate = jest.fn();
+    component.cancelEditMessage();
+    expect(component.requestUpdate).toHaveBeenCalled();
+  });
+
   test('handleConversationOption calls sendMessage', async () => {
     component.sendMessage = jest.fn();
     await component.handleConversationOption('option');
