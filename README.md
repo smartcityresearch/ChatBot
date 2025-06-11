@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" alt="Maintained? Yes" >
 </a> 
 
-This repository contains a simple yet powerful chatbot for answering smart city-related queries using a backend powered by Python and a frontend built with HTML.
+This repository contains a simple yet powerful chatbot for answering smart city-related queries using a backend powered by Python and a frontend built with HTML and Javascript.
 
 ## 🌐 Project Structure
 
@@ -49,9 +49,9 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Running the Project
+## ▶ Running the Project
 
-### ✅ Start the Backend Server
+### 1) Start the Backend Server
 
 ```bash
 python chatbot.py
@@ -59,7 +59,7 @@ python chatbot.py
 
 The backend will start running on `http://localhost:5000` (or the port defined in your `chatbot.py` file).
 
-### ✅ Open the Frontend
+### 2) Open the Frontend
 
 You can open the frontend directly in your browser:
 
@@ -80,15 +80,6 @@ ChatBot/
 └── templates/
     └── index.html
 ```
-
----
-
-## 🧑‍💻 Author
-
-- **Smart City Research Group**
-
----
-
 
 ## License
 
