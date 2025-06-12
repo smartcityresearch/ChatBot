@@ -699,17 +699,50 @@ describe('ChatBotComponent extra coverage', () => {
     expect(component.populateMessages).toHaveBeenCalled();
   });
 
-  test('_addVisualizationResponse adds icon and event', () => {
-    component.messages = [{ text: 'Bot', sender: 'bot' }, { text: 'User', sender: 'user' }, { text: 'Bot', sender: 'bot' }];
-    component.shadowRoot.getElementById = jest.fn(() => {
-      const el = document.createElement('div');
-      el.cloneNode = () => el;
-      el.parentNode = { replaceChild: jest.fn() };
-      el.addEventListener = jest.fn();
-      return el;
+  test('_addVisualizationResponse adds visualization icon and attaches click event', () => {
+    jest.useFakeTimers();
+    component.messages = [{ text: 'Bot', sender: 'bot' }];
+    const iconId = /^visualizeIcon_/;
+
+    // Create a parent and append the icon to it
+    const parent = document.createElement('div');
+    const fakeIcon = document.createElement('div');
+    parent.appendChild(fakeIcon);
+
+    fakeIcon.cloneNode = jest.fn(() => fakeIcon);
+    fakeIcon.addEventListener = jest.fn();
+
+    // Mock getElementById to return the icon when needed
+    component.shadowRoot.getElementById = jest.fn((id) => {
+      if (iconId.test(id)) return fakeIcon;
+      return null;
     });
-    component._addVisualizationResponse('response', 'query');
-    // No assertion needed, just for coverage
+
+    // Spy on replaceChild
+    const replaceChildSpy = jest.spyOn(parent, 'replaceChild');
+
+    // Patch parentNode getter to return our parent
+    Object.defineProperty(fakeIcon, 'parentNode', {
+      get: () => parent,
+    });
+
+    component.openVisualizationModal = jest.fn();
+
+    // Act
+    component._addVisualizationResponse('response text', 'query string');
+    jest.runAllTimers();
+
+    // Assert
+    expect(component.messages[component.messages.length - 1].text).toMatch(/visualization-icon/);
+    expect(fakeIcon.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
+    expect(replaceChildSpy).toHaveBeenCalledWith(fakeIcon, fakeIcon);
+
+    // Simulate click event and check openVisualizationModal is called
+    const clickHandler = fakeIcon.addEventListener.mock.calls[0][1];
+    clickHandler();
+    expect(component.openVisualizationModal).toHaveBeenCalledWith(encodeURIComponent('query string'));
+
+    jest.useRealTimers();
   });
 
   test('sendMessageToBackend returns fallback for missing response', async () => {
