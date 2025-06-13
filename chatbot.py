@@ -202,14 +202,17 @@ def fetch_historical_data(node_ids, time_period):
     
     results = {}
     base_url = "https://smartcitylivinglab.iiit.ac.in/verticals/all/temporal"
+    headers = {
+        "X-INTERNAL-API-KEY": "xmOfRs6CVXzNFXt6lg0I23c8AUWj9d"
+    }
     
     # Process each node ID individually with the new URL structure
     for node_id in node_ids:
         # Build URL with the node_id and date range
         url = f"{base_url}?from={from_date}&to={to_date}&node_id={node_id}"
+        response = requests.get(url, headers=headers)
         
         try:
-            response = requests.get(url)
             response.raise_for_status()
             node_data = response.json()
             
@@ -224,6 +227,7 @@ def fetch_historical_data(node_ids, time_period):
                 }
             }
         except requests.exceptions.RequestException as e:
+            print("DEBUG: Response content:", getattr(e.response, 'text', 'No response'))
             results[node_id] = {
                 "error": f"Failed to fetch historical data for node {node_id}: {str(e)}",
                 "metadata": {
@@ -849,26 +853,30 @@ async def debug_get(q: str = Query(..., description="User query for debugging"))
     system_prompt = prepare_system_prompt(prompts)
     classification_response = query_mistral_classification(system_prompt, q)
     response_data = extract_response_data(classification_response)
-    
+
     # Check with regex for temporal queries
     regex_is_temporal, regex_time_period = detect_temporal_query(q)
-    
+
     # Determine if it's a temporal query using both methods
     is_temporal = response_data.get("is_temporal", False) or regex_is_temporal
     time_period = response_data.get("time_period") or regex_time_period
-    
+
     # Fetch the node data based on classification
     node_ids = response_data.get("node_ids", [])
-    
+
     # Fetch the data based on query type
     node_data = {}
     today_data = {}
-    if is_temporal and time_period and node_ids:
-        node_data = fetch_historical_data(node_ids, time_period)
-        today_data = fetch_todays_data(node_ids)
-    elif node_ids:
-        node_data = fetch_all_node_data(node_ids)
-    
+    try:
+        if is_temporal and time_period and node_ids:
+            node_data = fetch_historical_data(node_ids, time_period)
+            today_data = fetch_todays_data(node_ids)
+        elif node_ids:
+            node_data = fetch_all_node_data(node_ids)
+    except Exception as e:
+        node_data = {"error": str(e)}
+        today_data = {}
+
     return {
         "query": q,
         "raw_classification_response": classification_response,
@@ -891,26 +899,30 @@ async def debug_post(request: QueryRequest):
     system_prompt = prepare_system_prompt(prompts)
     classification_response = query_mistral_classification(system_prompt, request.query)
     response_data = extract_response_data(classification_response)
-    
+
     # Check with regex for temporal queries
     regex_is_temporal, regex_time_period = detect_temporal_query(request.query)
-    
+
     # Determine if it's a temporal query using both methods
     is_temporal = response_data.get("is_temporal", False) or regex_is_temporal
     time_period = response_data.get("time_period") or regex_time_period
-    
+
     # Fetch the node data based on classification
     node_ids = response_data.get("node_ids", [])
-    
+
     # Fetch the data based on query type
     node_data = {}
     today_data = {}
-    if is_temporal and time_period and node_ids:
-        node_data = fetch_historical_data(node_ids, time_period)
-        today_data = fetch_todays_data(node_ids)
-    elif node_ids:
-        node_data = fetch_all_node_data(node_ids)
-    
+    try:
+        if is_temporal and time_period and node_ids:
+            node_data = fetch_historical_data(node_ids, time_period)
+            today_data = fetch_todays_data(node_ids)
+        elif node_ids:
+            node_data = fetch_all_node_data(node_ids)
+    except Exception as e:
+        node_data = {"error": str(e)}
+        today_data = {}
+
     return {
         "query": request.query,
         "raw_classification_response": classification_response,
