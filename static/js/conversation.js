@@ -129,7 +129,7 @@ const conversationTree = {
 
       async process(inputText) {
         try {
-          const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/query", {
+          const response = await fetch("http://localhost:8001/query", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query: inputText }),
