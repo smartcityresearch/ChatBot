@@ -12,4 +12,4 @@ html2text
 python-dotenv
 aiohttp
 pytz
-mistralai
+mistralai==0.0.7
