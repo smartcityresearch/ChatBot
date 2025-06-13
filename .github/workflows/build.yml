@@ -2,99 +2,48 @@ name: CI with SonarQube
 
 on:
   push:
-    branches: [development]
-  pull_request:
+    branches: [ development ]
 
 jobs:
-  test:
-    name: Run Tests and Generate Reports
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install pytest pytest-cov lxml
-          pip install fastapi uvicorn python-dotenv pydantic requests mistralai
-          pip install pytest-xdist pytest-asyncio httpx
-
-      - name: Run tests and generate coverage
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          pytest --cov=. --cov-report=xml --junitxml=tests/test-results.xml
-
-      - name: Convert JUnit to SonarQube Format
-        run: |
-          python3 - <<EOF
-          import sys
-          from lxml import etree
-
-          parser = etree.XMLParser(remove_blank_text=True)
-          tree = etree.parse("tests/test-results.xml", parser)
-          root = tree.getroot()
-
-          sonar_root = etree.Element("testExecutions", version="1")
-
-          for suite in root.findall("testsuite"):
-              file_attr = suite.get("name")
-              for case in suite.findall("testcase"):
-                  file_el = etree.SubElement(sonar_root, "file", path=file_attr)
-                  case_el = etree.SubElement(file_el, "testCase", name=case.get("name"), duration="1")
-                  if case.find("failure") is not None:
-                      case_el.set("status", "fail")
-                      failure = etree.SubElement(case_el, "failure", message=case.find("failure").get("message"))
-                      failure.text = case.find("failure").text or ""
-
-          with open("sonar-test-report.xml", "wb") as f:
-              f.write(etree.tostring(sonar_root, pretty_print=True, xml_declaration=True, encoding="UTF-8"))
-          EOF
-
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: |
-            coverage.xml
-            sonar-test-report.xml
-
-  sonarqube:
+  #############################
+  # SONARQUBE ONLY
+  #############################
+  sonar:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
-    needs: test
-
+  
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-reports
-
-      # Install SonarScanner CLI manually (if you use self-hosted SonarQube)
-      - name: Install SonarScanner CLI
+      - uses: actions/checkout@v3
+      
+      - name: Check for pre-generated coverage reports
         run: |
-          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-          unzip sonar-scanner-cli-4.8.0.2856-linux.zip
-          echo "SONAR_SCANNER=$PWD/sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner" >> $GITHUB_ENV
-          export PATH=$PATH:$PWD/sonar-scanner-4.8.0.2856-linux/bin
-
+          # Check if required files exist
+          if [ ! -f "coverage/frontend/lcov.info" ]; then
+            echo "Error: coverage/frontend/lcov.info not found! Please generate frontend coverage locally first."
+            exit 1
+          fi
+          
+          if [ ! -f "coverage/backend/coverage.xml" ]; then
+            echo "Error: coverage/backend/coverage.xml not found! Please generate backend coverage locally first."
+            exit 1
+          fi
+          
+          if [ ! -f "tests/reports/merged-test-report.xml" ]; then
+            echo "Error: tests/reports/merged-test-report.xml not found! Please generate and merge test reports locally first."
+            exit 1
+          fi
+          
+          echo "✓ All required coverage files found"
+  
       - name: Run SonarQube Scanner
+        uses: sonarsource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          $SONAR_SCANNER \
-            -Dsonar.sources=. \
-            -Dsonar.tests=tests \
-            -Dsonar.host.url=<your_sonarqube_server_url> \
-            -Dsonar.login=$SONAR_TOKEN \
-            -Dsonar.python.coverage.reportPaths=coverage.xml \
-            -Dsonar.testExecutionReportPaths=sonar-test-report.xml
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.sources=. 
+            -Dsonar.tests=tests
+            -Dsonar.javascript.lcov.reportPaths=coverage/frontend/lcov.info
+            -Dsonar.python.coverage.reportPaths=coverage/backend/coverage.xml
+            -Dsonar.testExecutionReportPaths=tests/reports/merged-test-report.xml
