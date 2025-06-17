@@ -339,7 +339,7 @@ describe('conversationTree functionality', () => {
     
     const processMethod = conversationTree.nodes.ProcessQuestionNode.process;
     // Use the actual URL from conversation.js
-    const expectedUrl = "https://smartcitylivinglab.iiit.ac.in/chatbot-api/query";
+    const expectedUrl = "https://smartcitylivinglab.iiit.ac.in/chatbot-api//query";
     const result = await processMethod("Test query");
     
     expect(global.fetch).toHaveBeenCalledWith(

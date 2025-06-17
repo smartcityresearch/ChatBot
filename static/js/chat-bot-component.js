@@ -1947,7 +1947,7 @@ flex-direction: row;
 
     try {
       const decodedQuery = decodeURIComponent(query);
-      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-apidebug", {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: decodedQuery })
@@ -2153,7 +2153,7 @@ flex-direction: row;
   }
   async sendMessageToBackend(message) {
     try {
-      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-apiquery", {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: message })

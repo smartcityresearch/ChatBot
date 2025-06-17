@@ -322,7 +322,7 @@ describe('ProcessQuestionNode.process method', () => {
     await processMethod(inputText);
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://smartcitylivinglab.iiit.ac.in/chatbot-apiquery",  // Updated URL to match implementation
+      "https://smartcitylivinglab.iiit.ac.in/chatbot-api/query",  // Updated URL to match implementation
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
