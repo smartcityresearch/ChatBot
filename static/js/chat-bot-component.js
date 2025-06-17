@@ -1947,7 +1947,7 @@ flex-direction: row;
 
     try {
       const decodedQuery = decodeURIComponent(query);
-      const response = await fetch("http://localhost:8001/debug", {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-apidebug", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: decodedQuery })
@@ -2153,7 +2153,7 @@ flex-direction: row;
   }
   async sendMessageToBackend(message) {
     try {
-      const response = await fetch("http://localhost:8001/query", {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-apiquery", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: message })
