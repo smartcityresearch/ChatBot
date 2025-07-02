@@ -2320,7 +2320,7 @@ flex-direction: row;
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
-          src="/static/images/chat-bot-logo.png"
+          src="https://smartcityresearch.github.io/ChatBot/static/images/chat-bot-logo.png"
           alt="Chat Icon"
           width="40"
           height="40"
