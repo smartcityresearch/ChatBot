@@ -2320,7 +2320,7 @@ flex-direction: row;
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
-          // src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
+          src="/static/images/chat-bot-logo.png"
           alt="Chat Icon"
           width="40"
           height="40"
