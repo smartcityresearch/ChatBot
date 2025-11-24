@@ -3,14 +3,6 @@ import { LitElement, html, css } from "https://cdn.jsdelivr.net/gh/lit/dist@3/co
 import "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
 import { conversationTree } from "./conversation.js";
 
-const ANUVAAD_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/6872172f4f34535ffa89b90f";
-const ANUVAAD_ACCESS_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2ODcyMTcyZjRmMzQ1MzVmZmE4OWI5MGYiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAwLCJhY2Nlc3Nfc3RhcnRfZGF0ZSI6IjIwMjUtMTAtMTRUMDA6MDA6MDAiLCJhY2Nlc3NfZW5kX2RhdGUiOiIyMDUwLTEwLTE0VDIzOjU5OjU5IiwiaGFzaGVkX3Bhc3N3b3JkIjoiJDJiJDEyJGpFSVpCcWNteDUxQ1F2RDV3WDFjdnVxZkJVSUR4V2RBYk9IaUpheTVGNHlZMGt3YmU5SVJLIiwiZXhwIjoyNTQ5NDA0Nzk5fQ.086W_U9k_0IUvW1YYwsXLJ00iq3VJ3BZr3ypERCwRvg";
-
-const HINDI_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/67b86729b5cc0eb92316383c";
-const HINDI_ACCESS_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NjcyOWI1Y2MwZWI5MjMxNjM4M2MiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.SQkL_blT2Cu0yLDunDhXrlvWhAtll0om36OaqVyd9uo";
-
 export class DataProcessor {
   constructor(data) {
     this.data = data;
@@ -77,7 +69,6 @@ export class DataProcessor {
 export class ChatBotComponent extends LitElement {
   showingTemperatureOptions = false;
   originalQuery = "";
-
   static styles = css`
     /* Existing styles remain the same */
 
@@ -1076,15 +1067,14 @@ export class ChatBotComponent extends LitElement {
     .language-dropdown-container {
       position: relative;
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
       margin-bottom: 5px;
-      padding: 0 10px;
     }
 
     .language-dropdown {
       position: absolute;
       bottom: 100%;
-      right: 10px;
+      right: 0;
       background: white;
       border: 1px solid #ccc;
       border-radius: 8px;
@@ -1153,89 +1143,6 @@ export class ChatBotComponent extends LitElement {
     this.showLanguageDropdown = false;
     this.selectedLanguage = "English";
   }
-
-  containsTelugu(text) {
-    return /[\u0C00-\u0C7F]/.test(text || "");
-  }
-
-  containsHindi(text) {
-    return /[\u0900-\u097F]/.test(text || "");
-  }
-
-  async translateText(inputText) {
-    if (!inputText?.trim()) return inputText;
-
-    // Determine which API to use based on selected language
-    let apiUrl, accessToken;
-    if (this.selectedLanguage === "Telugu") {
-      apiUrl = ANUVAAD_TRANSLATION_API;
-      accessToken = ANUVAAD_ACCESS_TOKEN;
-    } else if (this.selectedLanguage === "Hindi") {
-      apiUrl = HINDI_TRANSLATION_API;
-      accessToken = HINDI_ACCESS_TOKEN;
-    } else {
-      return inputText; // No translation needed for English
-    }
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "access-token": accessToken,
-        },
-        body: JSON.stringify({ input_text: inputText }),
-      });
-      if (!response.ok) throw new Error(`Translation API response ${response.status}`);
-      const payload = await response.json();
-      return payload?.data?.output_text ?? inputText;
-    } catch (error) {
-      console.error("Translation error:", error);
-      return inputText;
-    }
-  }
-
-  async localizeBotText(text) {
-    if (this.selectedLanguage === "English" || !text?.trim() || text.includes("<")) return text;
-    const translated = await this.translateText(text);
-
-    // Check if translation was successful based on language
-    if (this.selectedLanguage === "Telugu") {
-      return this.containsTelugu(translated) ? translated : text;
-    } else if (this.selectedLanguage === "Hindi") {
-      return this.containsHindi(translated) ? translated : text;
-    }
-
-    return text;
-  }
-
-  async localizeUserInputForBackend(inputText) {
-    if (this.selectedLanguage === "English") {
-      return { displayText: inputText, backendText: inputText };
-    }
-
-    const translated = await this.translateText(inputText);
-    let inputHasTargetLanguage, translatedHasTargetLanguage;
-
-    if (this.selectedLanguage === "Telugu") {
-      inputHasTargetLanguage = this.containsTelugu(inputText);
-      translatedHasTargetLanguage = this.containsTelugu(translated);
-    } else if (this.selectedLanguage === "Hindi") {
-      inputHasTargetLanguage = this.containsHindi(inputText);
-      translatedHasTargetLanguage = this.containsHindi(translated);
-    }
-
-    return {
-      displayText: !inputHasTargetLanguage && translatedHasTargetLanguage ? translated : inputText,
-      backendText: inputHasTargetLanguage && !translatedHasTargetLanguage ? translated : inputText,
-    };
-  }
-
-  async addLocalizedBotMessage(text) {
-    const localized = await this.localizeBotText(text);
-    this.addMessage(localized, "bot");
-  }
-
   startEditMessage(index) {
     // Only allow editing user messages
     if (this.messages[index].sender === "user") {
@@ -1255,9 +1162,8 @@ export class ChatBotComponent extends LitElement {
   async saveEditedMessage() {
     if (this.editingMessageIndex === -1 || !this.editedMessage.trim()) return;
 
-    const sanitizedInput = this.editedMessage.trim();
-    const localization = await this.localizeUserInputForBackend(sanitizedInput);
-    this.messages[this.editingMessageIndex].text = localization.displayText;
+    // Update the user message with edited content
+    this.messages[this.editingMessageIndex].text = this.editedMessage.trim();
     const responseIndex = this.editingMessageIndex + 1;
 
     // Remove all messages after the edited message
@@ -1281,10 +1187,10 @@ export class ChatBotComponent extends LitElement {
     }, 500);
 
     try {
-      const response = await this.sendMessageToBackend(localization.backendText);
+      const response = await this.sendMessageToBackend(this.editedMessage.trim());
       clearInterval(loadingInterval);
 
-      const lowerMsg = localization.backendText.toLowerCase();
+      const lowerMsg = this.editedMessage.toLowerCase();
       const isTemporalDataQuery = ["past", "last", "history", "historical", "trend", "over time", "yesterday", "week", "month", "year", "hour", "day"].some((keyword) => lowerMsg.includes(keyword));
       const isSensorParameterQuery = [
         "temperature",
@@ -1314,15 +1220,14 @@ export class ChatBotComponent extends LitElement {
         "noise",
       ].some((keyword) => lowerMsg.includes(keyword));
 
-      const localizedResponse = await this.localizeBotText(response);
       if (isTemporalDataQuery && isSensorParameterQuery) {
-        this._addVisualizationResponse(localizedResponse, localization.backendText);
+        this._addVisualizationResponse(response, this.editedMessage.trim());
       } else {
-        this.messages[this.messages.length - 1].text = localizedResponse;
+        this.messages[this.messages.length - 1].text = response;
       }
     } catch (error) {
       clearInterval(loadingInterval);
-      this.messages[this.messages.length - 1].text = await this.localizeBotText("Sorry, I couldn't process your edited question. Please try again.");
+      this.messages[this.messages.length - 1].text = "Sorry, I couldn't process your edited question. Please try again.";
       console.error("Error processing edited message:", error);
     }
 
@@ -1452,7 +1357,7 @@ export class ChatBotComponent extends LitElement {
             closestMatch = node.node_id;
           }
         }
-        await this.addLocalizedBotMessage(`No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`);
+        this.addMessage(`No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`, "bot");
         filteredNodes = Object.values(data_dict).filter((node) => node.node_id === closestMatch);
       }
     }
@@ -1465,7 +1370,7 @@ export class ChatBotComponent extends LitElement {
       if (floorIdentifier) identifiers.push("Floor - " + floorIdentifier);
       if (nodeIdentifier) identifiers.push("Node - " + nodeIdentifier);
       const message = "No data found for the identifiers: " + identifiers.join(", ");
-      await this.addLocalizedBotMessage(message);
+      this.addMessage(message, "bot");
       return false;
     }
 
@@ -1489,7 +1394,7 @@ export class ChatBotComponent extends LitElement {
     for (const [k, value] of Object.entries(node)) {
       responseMessage += k + ": " + value + "\n";
     }
-    await this.addLocalizedBotMessage(responseMessage);
+    this.addMessage(responseMessage, "bot");
 
     // Markdown table for multiple nodes
     if (filteredNodes.length > 1) {
@@ -1523,7 +1428,7 @@ export class ChatBotComponent extends LitElement {
         }),
       });
       const responseJson = await tableResponse.json();
-      await this.addLocalizedBotMessage(`Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`);
+      this.addMessage(`Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`, "bot");
     }
     return false;
   }
@@ -1538,9 +1443,6 @@ export class ChatBotComponent extends LitElement {
   async sendMessage() {
     const userInputTrimmed = this.userInput.trim();
     if (!userInputTrimmed) return;
-
-    const isTeluguSelected = this.selectedLanguage === "Telugu";
-    const isHindiSelected = this.selectedLanguage === "Hindi";
 
     // Helper: handle loading dots
     const startLoading = () => {
@@ -1566,15 +1468,15 @@ export class ChatBotComponent extends LitElement {
     // Helper: handle continue/exit selection
     const handleContinueExit = async (input) => {
       if (input === "1") {
-        await this.addLocalizedBotMessage(conversationTree.nodes.AskQuestionNode.message);
+        this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
         this.currentOptions = [];
         this.stringInput = true;
         this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
         this.requestUpdate();
       } else if (input === "3") {
-        await this.addLocalizedBotMessage(conversationTree.nodes.ExitChatNode.message);
+        this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
         setTimeout(() => {
-          this.addLocalizedBotMessage(conversationTree.nodes.MainMenu.message);
+          this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
           this.currentOptions = conversationTree.nodes.MainMenu.options;
           this.recommendedQuestions = [];
           this.conversationOptions = [];
@@ -1587,7 +1489,7 @@ export class ChatBotComponent extends LitElement {
     const handleFetchDataFallback = async (input) => {
       let continueConversation = await this.fetchDataAndAskContinue(false, false, false, false, input);
       if (!continueConversation) {
-        await this.addLocalizedBotMessage("Would you like to:\n1. Ask Another Question\n2. Exit Chat");
+        this.addMessage("Would you like to:\n1. Ask Another Question\n2. Exit Chat", "bot");
         this.currentOptions = [
           { text: "1", next: "AskQuestionNode" },
           { text: "2", next: "ExitChatNode" },
@@ -1622,7 +1524,7 @@ export class ChatBotComponent extends LitElement {
       if (selectedOption.terminate) {
         let continueConversation = await this.fetchDataAndAskContinue(this.buildingIdentifier, this.verticalIdentifier, this.floorIdentifier, this.acc);
         if (!continueConversation) {
-          await this.addLocalizedBotMessage("Thank you for using the chatbot. Have a great day!");
+          this.addMessage("Thank you for using the chatbot. Have a great day!", "bot");
           this.currentOptions = [
             { text: "1", next: "BuildingNode" },
             { text: "2", next: "VerticalNode" },
@@ -1653,20 +1555,24 @@ export class ChatBotComponent extends LitElement {
       } else {
         responseMessage = "Error: Invalid next node";
       }
-      await this.addLocalizedBotMessage(responseMessage);
+      this.addMessage(responseMessage, "bot");
     };
 
     // Main logic
     if (this.stringInput) {
       this.stringInput = false;
+      this.addMessage(userInputTrimmed, "user");
       const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
-      const localization = await this.localizeUserInputForBackend(userInputTrimmed);
-      this.addMessage(localization.displayText, "user");
+
       if (lastBotMessage.includes("Please enter your question:")) {
         let loadingInterval = startLoading();
         try {
-          const queryForBackend = isTeluguSelected ? localization.backendText : userInputTrimmed;
-          const response = await this.sendMessageToBackend(queryForBackend);
+          const temporalDataKeywords = ["past", "last", "history", "historical", "trend", "over time", "yesterday", "week", "month", "year", "hour", "day"];
+          const tempHumidityKeywords = ["temperature", "humidity"];
+          const isTemporalDataQuery = temporalDataKeywords.some((keyword) => userInputTrimmed.toLowerCase().includes(keyword));
+          const isTempHumidityQuery = tempHumidityKeywords.some((keyword) => userInputTrimmed.toLowerCase().includes(keyword));
+
+          const response = await this.sendMessageToBackend(userInputTrimmed);
           let responseData;
           try {
             responseData = typeof response === "string" ? JSON.parse(response) : response;
@@ -1683,37 +1589,33 @@ export class ChatBotComponent extends LitElement {
 
           const isLocationValid = extractedLocation && ["Kohli Block", "Vindhya"].some((location) => extractedLocation.toLowerCase() === location.toLowerCase());
 
-          const localizedPrimaryResponse = await this.localizeBotText(responseData.response);
           if (isTemporalDataQuery && isTempHumidityQuery) {
             const iconId = `visualizeIcon_${Date.now()}`;
             this.addMessage(
-              `${localizedPrimaryResponse}\n\n<div id="${iconId}" class="visualization-icon">
-                  <img src="https://smartcityresearch.github.io/ChatBot/static/images/bar1.png" alt="Visualize" />
-                </div>`,
+              `${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
+                    <img src="/static/images/bar1.png" alt="Visualize" />
+                  </div>`,
               "bot"
             );
             setTimeout(() => {
               const icon = this.shadowRoot.getElementById(iconId);
               if (icon) {
-                const newIcon = icon.cloneNode(true);
-                icon.parentNode.replaceChild(newIcon, icon);
-                newIcon.addEventListener("click", () => {
-                  const encodedQuery = encodeURIComponent(queryForBackend);
+                icon.addEventListener("click", () => {
+                  const encodedQuery = encodeURIComponent(userInputTrimmed);
                   this.openVisualizationModal(encodedQuery);
                 });
               }
             }, 100);
-            const followUp = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
-            this.addMessage(followUp, "bot");
+            this.addMessage("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat", "bot");
             setBotOptions("QuestionResponseOptionsNode");
           } else if (isTempHumidityQuery && isLocationValid) {
             const indoorButtonId = `indoorButton_${Date.now()}`;
             const outdoorButtonId = `outdoorButton_${Date.now()}`;
             this.addMessage(
-              `${localizedPrimaryResponse}\n\n<div class="location-buttons">
-                <button id="${indoorButtonId}" class="location-btn">Indoor</button>
-                <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
-              </div>`,
+              `${responseData.response}\n\n<div class="location-buttons">
+                  <button id="${indoorButtonId}" class="location-btn">Indoor</button>
+                  <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
+                </div>`,
               "bot"
             );
             setTimeout(() => {
@@ -1723,15 +1625,14 @@ export class ChatBotComponent extends LitElement {
               if (outdoorButton) outdoorButton.addEventListener("click", () => this.handleLocationButton("Outdoor"));
             }, 100);
           } else {
-            this.addMessage(localizedPrimaryResponse, "bot");
-            const followUp = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
-            this.addMessage(followUp, "bot");
+            this.addMessage(responseData.response, "bot");
+            this.addMessage("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat", "bot");
             setBotOptions("QuestionResponseOptionsNode");
           }
         } catch (error) {
           if (loadingInterval) clearInterval(loadingInterval);
-          await this.addLocalizedBotMessage("Sorry, I couldn't process your question. Please try again.");
-          await this.addLocalizedBotMessage(conversationTree.nodes.MainMenu.message);
+          this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
+          this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
           this.currentOptions = conversationTree.nodes.MainMenu.options;
           this.recommendedQuestions = [];
           this.conversationOptions = [];
@@ -1752,7 +1653,7 @@ export class ChatBotComponent extends LitElement {
     if (selectedOption) {
       await handleOptionSelection(selectedOption);
     } else {
-      await this.addLocalizedBotMessage("Error: Invalid option selected");
+      this.addMessage("Error: Invalid option selected", "bot");
       const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
       this.addMessage(lastCorrectMessage.text, "bot");
     }
@@ -1803,18 +1704,18 @@ export class ChatBotComponent extends LitElement {
       this.messages.pop();
 
       // Add the location-specific response
-      const localizedResponse = await this.localizeBotText(response);
-      this.addMessage(localizedResponse, "bot");
-      const followUp = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
-      this.addMessage(followUp, "bot");
+      this.addMessage(response, "bot");
+
+      // Provide continuation options
+      this.addMessage("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat", "bot");
       this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
       this.recommendedQuestions = [];
       this.conversationOptions = this.currentOptions;
       this.requestUpdate();
     } catch (error) {
       console.error("Error processing location-specific query:", error);
-      await this.addLocalizedBotMessage("Sorry, I couldn't process your location-specific query. Please try again.");
-      await this.addLocalizedBotMessage(conversationTree.nodes.MainMenu.message);
+      this.addMessage("Sorry, I couldn't process your location-specific query. Please try again.", "bot");
+      this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
       this.currentOptions = conversationTree.nodes.MainMenu.options;
       this.recommendedQuestions = [];
       this.conversationOptions = [];
@@ -2035,7 +1936,7 @@ export class ChatBotComponent extends LitElement {
       const decodedQuery = decodeURIComponent(query);
       const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: decodedQuery }),
       });
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -2350,6 +2251,7 @@ export class ChatBotComponent extends LitElement {
             // Add event listener to the icon
             setTimeout(() => {
               iconPart.addEventListener("click", () => {
+                console.log("Visualization icon clicked!");
                 const encodedQuery = encodeURIComponent(this.messages[index - 1]?.text || "");
                 this.openVisualizationModal(encodedQuery);
               });
@@ -2388,8 +2290,7 @@ export class ChatBotComponent extends LitElement {
     this.sendMessage();
   }
 
-  toggleLanguageDropdown(e) {
-    if (e) e.stopPropagation();
+  toggleLanguageDropdown() {
     this.showLanguageDropdown = !this.showLanguageDropdown;
     this.requestUpdate();
   }
@@ -2397,13 +2298,19 @@ export class ChatBotComponent extends LitElement {
   selectLanguage(language) {
     this.selectedLanguage = language;
     this.showLanguageDropdown = false;
+    console.log("Selected language:", language);
+    // Add your translation logic here
     this.requestUpdate();
   }
 
   // Modify the render method to implement the toggle button and conditional display
   // Modify the render method to implement the requested changes
   render() {
-    const languages = ["English", "Hindi", "Telugu"];
+    const languages = [
+      "English",
+      "Hindi",
+      "Telugu"
+    ];
 
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
@@ -2448,26 +2355,35 @@ export class ChatBotComponent extends LitElement {
             `
           : ""}
 
+        ${this.showLanguageDropdown
+          ? html`
+              <div class="language-dropdown-container">
+                <div class="language-dropdown">
+                  ${languages.map(
+                    (lang) => html`
+                      <div 
+                        class="language-option ${lang === this.selectedLanguage ? 'selected' : ''}" 
+                        @click="${() => this.selectLanguage(lang)}"
+                      >
+                        ${lang}
+                      </div>
+                    `
+                  )}
+                </div>
+              </div>
+            `
+          : ""}
+
         <div class="input-area">
           <input @keydown="${this.handleKeyDown}" type="text" @input="${this.handleUserInput}" .value="${this.userInput}" placeholder="Enter any question..." />
           <button id="send-button" @click="${this.sendMessage}">
             <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="Send" class="send-icon" />
           </button>
 
-          <button id="translate-button" @click="${(e) => this.toggleLanguageDropdown(e)}">
+          <button id="translate-button" @click="${this.toggleLanguageDropdown}">
             <img src="https://res.cloudinary.com/dxoq1rrh4/image/upload/v1762950092/transalteimage_flaflk.png" alt="Translate" class="send-icon" />
           </button>
         </div>
-
-        ${this.showLanguageDropdown
-          ? html`
-              <div class="language-dropdown-container" @click="${(e) => e.stopPropagation()}">
-                <div class="language-dropdown">
-                  ${languages.map((lang) => html` <div class="language-option ${lang === this.selectedLanguage ? "selected" : ""}" @click="${() => this.selectLanguage(lang)}">${lang}</div> `)}
-                </div>
-              </div>
-            `
-          : ""}
       </div>
     `;
   }
