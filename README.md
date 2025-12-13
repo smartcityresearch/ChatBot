@@ -56,7 +56,7 @@ pip install -r requirements.txt
 ```bash
 python chatbot.py
 ```
-
+python -m http.server 8000
 The backend will start running on `http://localhost:5000` (or the port defined in your `chatbot.py` file).
 
 ### 2) Open the Frontend

@@ -2249,6 +2249,20 @@ flex-direction: row;
         // Create content container
         const messageContent = document.createElement("div");
 
+        // Helper to escape HTML
+        function escapeHTML(str) {
+          return str.replace(/[&<>"']/g, function(tag) {
+            const charsToReplace = {
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+            };
+            return charsToReplace[tag] || tag;
+          });
+        }
+
         if (hasVisualizationIcon) {
           // For messages with visualization icons, we need to handle them specially
           // Split the message into text part and icon part
@@ -2257,7 +2271,12 @@ flex-direction: row;
           // Add the text part
           if (textAndIcon[0]) {
             const textPart = document.createElement("div");
-            textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
+            // Escape HTML for user messages
+            let safeText = textAndIcon[0];
+            if (msg.sender === 'user') {
+              safeText = escapeHTML(safeText);
+            }
+            textPart.innerHTML = safeText.replace(/\n/g, "<br>");
             messageContent.appendChild(textPart);
           }
 
@@ -2283,7 +2302,11 @@ flex-direction: row;
           }
         } else {
           // For regular messages
-          messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
+          let safeText = msg.text;
+          if (msg.sender === 'user') {
+            safeText = escapeHTML(safeText);
+          }
+          messageContent.innerHTML = safeText.replace(/\n/g, "<br>");
         }
 
         // Add edit icon for user messages
