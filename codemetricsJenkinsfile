@@ -1,0 +1,57 @@
+node {
+
+  try {
+
+    stage('SCM') {
+      checkout scm
+    }
+
+    stage('SonarQube Analysis') {
+      def scannerHome = tool 'SonarScanner'
+
+      withSonarQubeEnv('SonarQube') {
+        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+          sh """
+            ${scannerHome}/bin/sonar-scanner \
+              -Dsonar.token=$SONAR_TOKEN
+          """
+        }
+      }
+    }
+
+    // ✅ SUCCESS Slack notification
+    slackSend(
+      botUser: true,
+      channel: 'C084VRULD8C',
+      tokenCredentialId: 'slack-token',
+      color: 'good',
+      message: """
+Code Analysis Done
+:white_check_mark: *Build SUCCESS*
+*Job:* ${env.JOB_NAME}
+*Build:* #${env.BUILD_NUMBER}
+*URL:* ${env.BUILD_URL}
+"""
+    )
+
+  } catch (err) {
+
+    // ❌ FAILURE Slack notification
+    slackSend(
+      botUser: true,
+      channel: 'C084VRULD8C',
+      tokenCredentialId: 'slack-token',
+      color: 'danger',
+      message: """
+Code Analysis Failed
+:x: *Build FAILED*
+*Job:* ${env.JOB_NAME}
+*Build:* #${env.BUILD_NUMBER}
+*Stage:* ${env.STAGE_NAME}
+*URL:* ${env.BUILD_URL}
+"""
+    )
+
+    throw err
+  }
+}
