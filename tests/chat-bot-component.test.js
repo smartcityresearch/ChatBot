@@ -473,7 +473,7 @@ class MockChatBotComponent {
 
   async sendMessageToBackend(message) {
     try {
-      const response = await fetch('http://localhost:8001/query', {
+      const response = await fetch('https://smartcitylivinglab.iiit.ac.in/chatbot-api/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: message })
@@ -507,7 +507,7 @@ class MockChatBotComponent {
       const decodedQuery = decodeURIComponent(query);
       
       // Mock fetch data
-      const response = await fetch('http://localhost:8001/debug', {
+      const response = await fetch('https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: decodedQuery })
@@ -886,7 +886,7 @@ describe('Actual ChatBotComponent (LitElement)', () => {
     expect(modal).not.toBeNull();
     expect(modal.classList.contains('show')).toBe(true);
     expect(fetch).toHaveBeenCalledWith(
-        "http://localhost:8001/debug", // or the correct URL
+        "https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug", // or the correct URL
         expect.objectContaining({
             method: "POST",
             body: JSON.stringify({ query: "show temperature" })
@@ -1017,7 +1017,7 @@ describe('ChatBotComponent', () => {
       
       // Check that fetch was called
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8001/query',
+        'https://smartcitylivinglab.iiit.ac.in/chatbot-api/query',
         expect.objectContaining({
           method: 'POST',
           body: expect.stringContaining('Edited message')
@@ -1071,7 +1071,7 @@ describe('ChatBotComponent', () => {
   test('sendMessageToBackend calls fetch with correct parameters', async () => {
     await component.sendMessageToBackend('test query');
     
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8001/query', {
+    expect(fetch).toHaveBeenCalledWith('https://smartcitylivinglab.iiit.ac.in/chatbot-api/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: 'test query' })
@@ -1331,7 +1331,7 @@ describe('ChatBotComponent', () => {
     
     // Check that fetch was called with location-specific query
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:8001/query',
+      'https://smartcitylivinglab.iiit.ac.in/chatbot-api/query',
       expect.objectContaining({
         body: expect.stringContaining('Temperature at Indoor')
       })

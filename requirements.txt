@@ -10,6 +10,6 @@ pydantic
 requests
 html2text
 python-dotenv
-aiothttp
+aiohttp
 pytz
-mistralai
+mistralai==0.0.7

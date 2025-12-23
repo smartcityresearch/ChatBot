@@ -1947,7 +1947,7 @@ flex-direction: row;
 
     try {
       const decodedQuery = decodeURIComponent(query);
-      const response = await fetch("http://localhost:8001/debug", {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: decodedQuery })
@@ -2153,7 +2153,7 @@ flex-direction: row;
   }
   async sendMessageToBackend(message) {
     try {
-      const response = await fetch("http://localhost:8001/query", {
+      const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: message })
@@ -2249,6 +2249,20 @@ flex-direction: row;
         // Create content container
         const messageContent = document.createElement("div");
 
+        // Helper to escape HTML
+        function escapeHTML(str) {
+          return str.replace(/[&<>"']/g, function(tag) {
+            const charsToReplace = {
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+            };
+            return charsToReplace[tag] || tag;
+          });
+        }
+
         if (hasVisualizationIcon) {
           // For messages with visualization icons, we need to handle them specially
           // Split the message into text part and icon part
@@ -2257,7 +2271,12 @@ flex-direction: row;
           // Add the text part
           if (textAndIcon[0]) {
             const textPart = document.createElement("div");
-            textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
+            // Escape HTML for user messages
+            let safeText = textAndIcon[0];
+            if (msg.sender === 'user') {
+              safeText = escapeHTML(safeText);
+            }
+            textPart.innerHTML = safeText.replace(/\n/g, "<br>");
             messageContent.appendChild(textPart);
           }
 
@@ -2283,7 +2302,11 @@ flex-direction: row;
           }
         } else {
           // For regular messages
-          messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
+          let safeText = msg.text;
+          if (msg.sender === 'user') {
+            safeText = escapeHTML(safeText);
+          }
+          messageContent.innerHTML = safeText.replace(/\n/g, "<br>");
         }
 
         // Add edit icon for user messages
@@ -2320,7 +2343,7 @@ flex-direction: row;
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
-          src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
+          src="https://smartcityresearch.github.io/ChatBot/static/images/chat-bot-logo.png"
           alt="Chat Icon"
           width="40"
           height="40"
