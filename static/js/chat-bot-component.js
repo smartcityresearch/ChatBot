@@ -1523,7 +1523,8 @@ export class ChatBotComponent extends LitElement {
         }),
       });
       const responseJson = await tableResponse.json();
-      await this.addLocalizedBotMessage(`Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`);
+      const localizedMessage = await this.localizeBotText("Data table for all the identifiers can be found");
+      await this.addLocalizedBotMessage(`${localizedMessage} <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`);
     }
     return false;
   }
@@ -2139,6 +2140,7 @@ export class ChatBotComponent extends LitElement {
     ];
 
     // Use a simple hash to consistently map nodeId to a color
+   
     let colorIndex = parseInt(nodeId.replace(/\D/g, ""));
     if (isNaN(colorIndex)) colorIndex = 0;
     colorIndex = colorIndex % colors.length;
@@ -2328,6 +2330,26 @@ export class ChatBotComponent extends LitElement {
         // Create content container
         const messageContent = document.createElement("div");
 
+        // Helper to escape HTML
+
+        function escapeHTML(str) {
+          return str.replace(/[&<>"']/g, function (tag) {
+            const charsToReplace = {
+              "&": "&amp;",
+
+              "<": "&lt;",
+
+              ">": "&gt;",
+
+              '"': "&quot;",
+
+              "'": "&#39;",
+            };
+
+            return charsToReplace[tag] || tag;
+          });
+        }
+
         if (hasVisualizationIcon) {
           // For messages with visualization icons, we need to handle them specially
           // Split the message into text part and icon part
@@ -2336,7 +2358,15 @@ export class ChatBotComponent extends LitElement {
           // Add the text part
           if (textAndIcon[0]) {
             const textPart = document.createElement("div");
-            textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
+            // Escape HTML for user messages
+
+            let safeText = textAndIcon[0];
+
+            if (msg.sender === "user") {
+              safeText = escapeHTML(safeText);
+            }
+
+            textPart.innerHTML = safeText.replace(/\n/g, "<br>");
             messageContent.appendChild(textPart);
           }
 
@@ -2359,7 +2389,11 @@ export class ChatBotComponent extends LitElement {
           }
         } else {
           // For regular messages
-          messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
+          let safeText = msg.text;
+          if (msg.sender === "user") {
+            safeText = escapeHTML(safeText);
+          }
+          messageContent.innerHTML = safeText.replace(/\n/g, "<br>");
         }
 
         // Add edit icon for user messages
@@ -2405,6 +2439,19 @@ export class ChatBotComponent extends LitElement {
   render() {
     const languages = ["English", "Hindi", "Telugu"];
 
+    // Define titles and subtitles for each language
+    const titles = {
+      English: "SASI",
+      Hindi: "सासी",
+      Telugu: "సాసి",
+    };
+
+    const subtitles = {
+      English: "Scalable Analytical Smart-city Interface",
+      Hindi: "स्केलेबल एनालिटिकल स्मार्ट-सिटी इंटरफेस",
+      Telugu: "స్కేలబుల్ అనలిటికల్ స్మార్ట్-సిటీ ఇంటర్‌ఫేస్",
+    };
+
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img src="https://smartcityresearch.github.io/ChatBot/static/images/chat-bot-logo.png" alt="Chat Icon" width="40" height="40" />
@@ -2413,8 +2460,8 @@ export class ChatBotComponent extends LitElement {
         <div class="chat-header">
           <img src="https://avatars.tidiochat.com/pfa3b5japlafq34amyqd5ls29r88nt8n/avatars/f9b8d61a-7737-4119-8e1d-8b24116aac5e.png" class="chat-logo" alt="Chat Logo" />
           <div class="chat-title-container">
-            <div class="chat-title">SASI</div>
-            <div class="chat-subtitle">Scalable Analytical Smart-city Interface</div>
+            <div class="chat-title">${titles[this.selectedLanguage]}</div>
+            <div class="chat-subtitle">${subtitles[this.selectedLanguage]}</div>
           </div>
           <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
         </div>
