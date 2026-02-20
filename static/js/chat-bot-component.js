@@ -1,11 +1,18 @@
+/* ===================== IMPORTS (MUST BE FIRST) ===================== */
+
 import {
   LitElement,
   html,
   css,
 } from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
-// Import Chart.js 
-import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+
+import "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+
 import { conversationTree } from "./conversation.js";
+const ANUVAAD_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/6872172f4f34535ffa89b90f";
+const ANUVAAD_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2ODcyMTcyZjRmMzQ1MzVmZmE4OWI5MGYiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAwLCJhY2Nlc3Nfc3RhcnRfZGF0ZSI6IjIwMjUtMTAtMTRUMDA6MDA6MDAiLCJhY2Nlc3NfZW5kX2RhdGUiOiIyMDUwLTEwLTE0VDIzOjU5OjU5IiwiaGFzaGVkX3Bhc3N3b3JkIjoiJDJiJDEyJGpFSVpCcWNteDUxQ1F2RDV3WDFjdnVxZkJVSUR4V2RBYk9IaUpheTVGNHlZMGt3YmU5SVJLIiwiZXhwIjoyNTQ5NDA0Nzk5fQ.086W_U9k_0IUvW1YYwsXLJ00iq3VJ3BZr3ypERCwRvg";
+const HINDI_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/67b86729b5cc0eb92316383c";
+const HINDI_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NjcyOWI1Y2MwZWI5MjMxNjM4M2MiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.SQkL_blT2Cu0yLDunDhXrlvWhAtll0om36OaqVyd9uo";
 
 export class DataProcessor {
   constructor(data) {
@@ -1092,7 +1099,113 @@ flex-direction: row;
     this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.currentChart = null;
+    this.showLanguageDropdown = false;
+    this.selectedLanguage = "English";
   }
+
+  // --- TRANSLATION METHODS ---
+  containsTelugu(text) {
+    return /[\u0C00-\u0C7F]/.test(text || "");
+  }
+
+  containsHindi(text) {
+    return /[\u0900-\u097F]/.test(text || "");
+  }
+
+  async translateText(inputText) {
+    if (!inputText?.trim()) return inputText;
+    let apiUrl, accessToken;
+    if (this.selectedLanguage === "Telugu") {
+      apiUrl = ANUVAAD_TRANSLATION_API;
+      accessToken = ANUVAAD_ACCESS_TOKEN;
+    } else if (this.selectedLanguage === "Hindi") {
+      apiUrl = HINDI_TRANSLATION_API;
+      accessToken = HINDI_ACCESS_TOKEN;
+    } else {
+      return inputText;
+    }
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "access-token": accessToken,
+        },
+        body: JSON.stringify({ input_text: inputText }),
+      });
+      if (!response.ok) throw new Error(`Translation API response ${response.status}`);
+      const payload = await response.json();
+      return payload?.data?.output_text ?? inputText;
+    } catch (error) {
+      console.error("Translation error:", error);
+      return inputText;
+    }
+  }
+
+  async localizeBotText(text) {
+    if (this.selectedLanguage === "English" || !text?.trim() || text.includes("<")) return text;
+    const translated = await this.translateText(text);
+    if (this.selectedLanguage === "Telugu") {
+      return this.containsTelugu(translated) ? translated : text;
+    } else if (this.selectedLanguage === "Hindi") {
+      return this.containsHindi(translated) ? translated : text;
+    }
+    return text;
+  }
+
+  async localizeUserInputForBackend(inputText) {
+    if (this.selectedLanguage === "English") {
+      return { displayText: inputText, backendText: inputText };
+    }
+    const translated = await this.translateText(inputText);
+    let inputHasTargetLanguage, translatedHasTargetLanguage;
+    if (this.selectedLanguage === "Telugu") {
+      inputHasTargetLanguage = this.containsTelugu(inputText);
+      translatedHasTargetLanguage = this.containsTelugu(translated);
+    } else if (this.selectedLanguage === "Hindi") {
+      inputHasTargetLanguage = this.containsHindi(inputText);
+      translatedHasTargetLanguage = this.containsHindi(translated);
+    }
+    return {
+      displayText: !inputHasTargetLanguage && translatedHasTargetLanguage ? translated : inputText,
+      backendText: inputHasTargetLanguage && !translatedHasTargetLanguage ? translated : inputText,
+    };
+  }
+
+  async addLocalizedBotMessage(text) {
+    const localized = await this.localizeBotText(text);
+    this.addMessage(localized, "bot");
+  }
+
+  toggleLanguageDropdown(e) {
+    if (e) e.stopPropagation();
+    this.showLanguageDropdown = !this.showLanguageDropdown;
+    this.requestUpdate();
+  }
+
+  async selectLanguage(language) {
+    this.selectedLanguage = language;
+    this.showLanguageDropdown = false;
+    this.requestUpdate();
+    await this.relocalizeAllMessages();
+    // Force re-render to update all static UI text
+    this.requestUpdate();
+  }
+
+  async relocalizeAllMessages() {
+    // Re-translate all previous messages to the selected language
+    for (let i = 0; i < this.messages.length; i++) {
+      const msg = this.messages[i];
+      if (msg.sender === 'bot') {
+        this.messages[i].text = await this.localizeBotText(msg.text);
+      } else if (msg.sender === 'user') {
+        // Translate user message to selected language
+        this.messages[i].text = await this.translateText(msg.text);
+      }
+    }
+    this.requestUpdate();
+  }
+
   startEditMessage(index) {
     // Only allow editing user messages
     if (this.messages[index].sender === 'user') {
@@ -1416,6 +1529,8 @@ flex-direction: row;
   async sendMessage() {
     const userInputTrimmed = this.userInput.trim();
     if (!userInputTrimmed) return;
+    // Translation: localize user input for backend and display
+    const { displayText, backendText } = await this.localizeUserInputForBackend(userInputTrimmed);
 
     // Helper: handle loading dots
     const startLoading = () => {
@@ -1544,13 +1659,16 @@ flex-direction: row;
       } else {
         responseMessage = "Error: Invalid next node";
       }
+      if (typeof responseMessage === 'string' && responseMessage.trim() && this.selectedLanguage !== 'English') {
+        responseMessage = await this.localizeBotText(responseMessage);
+      }
       this.addMessage(responseMessage, "bot");
     };
 
     // Main logic
     if (this.stringInput) {
       this.stringInput = false;
-      this.addMessage(userInputTrimmed, "user");
+      this.addMessage(displayText, "user");
       const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
 
       if (lastBotMessage.includes("Please enter your question:")) {
@@ -1564,7 +1682,7 @@ flex-direction: row;
           const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
           const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
 
-          const response = await this.sendMessageToBackend(userInputTrimmed);
+          const response = await this.sendMessageToBackend(backendText);
           let responseData;
           try {
             responseData = typeof response === 'string' ? JSON.parse(response) : response;
@@ -1587,7 +1705,8 @@ flex-direction: row;
 
           if (isTemporalDataQuery && isTempHumidityQuery) {
             const iconId = `visualizeIcon_${Date.now()}`;
-            this.addMessage(`${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(`${localizedResponse}\n\n<div id="${iconId}" class="visualization-icon">
                     <img src="/static/images/bar1.png" alt="Visualize" />
                   </div>`, "bot");
             setTimeout(() => {
@@ -1599,15 +1718,14 @@ flex-direction: row;
                 });
               }
             }, 100);
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
+            const localizedFollowup = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
+            this.addMessage(localizedFollowup, "bot");
             setBotOptions("QuestionResponseOptionsNode");
           } else if (isTempHumidityQuery && isLocationValid) {
             const indoorButtonId = `indoorButton_${Date.now()}`;
             const outdoorButtonId = `outdoorButton_${Date.now()}`;
-            this.addMessage(`${responseData.response}\n\n<div class="location-buttons">
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(`${localizedResponse}\n\n<div class="location-buttons">
                   <button id="${indoorButtonId}" class="location-btn">Indoor</button>
                   <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
                 </div>`, "bot");
@@ -1618,17 +1736,18 @@ flex-direction: row;
               if (outdoorButton) outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
             }, 100);
           } else {
-            this.addMessage(responseData.response, "bot");
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(localizedResponse, "bot");
+            const localizedFollowup = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
+            this.addMessage(localizedFollowup, "bot");
             setBotOptions("QuestionResponseOptionsNode");
           }
         } catch (error) {
           if (loadingInterval) clearInterval(loadingInterval);
-          this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
-          this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
+          const localizedError = await this.localizeBotText("Sorry, I couldn't process your question. Please try again.");
+          this.addMessage(localizedError, "bot");
+          const localizedMainMenu = await this.localizeBotText(conversationTree.nodes.MainMenu.message);
+          this.addMessage(localizedMainMenu, "bot");
           this.currentOptions = conversationTree.nodes.MainMenu.options;
           this.recommendedQuestions = [];
           this.conversationOptions = [];
@@ -1647,13 +1766,15 @@ flex-direction: row;
     const selectedOption = this.currentOptions.find(
       (option) => option.text === userInputTrimmed
     );
-    this.addMessage(userInputTrimmed, "user");
+    this.addMessage(displayText, "user");
     if (selectedOption) {
       await handleOptionSelection(selectedOption);
     } else {
-      this.addMessage("Error: Invalid option selected", "bot");
+      const localizedError = await this.localizeBotText("Error: Invalid option selected");
+      this.addMessage(localizedError, "bot");
       const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
-      this.addMessage(lastCorrectMessage.text, "bot");
+      const localizedLastCorrect = await this.localizeBotText(lastCorrectMessage.text);
+      this.addMessage(localizedLastCorrect, "bot");
     }
     this.resetInputAndPopulateMessages();
   }
@@ -2340,6 +2461,13 @@ flex-direction: row;
   // Modify the render method to implement the toggle button and conditional display
   // Modify the render method to implement the requested changes
   render() {
+    const languages = ["English", "Hindi", "Telugu"];
+    const titles = { English: "SASI", Hindi: "सासी", Telugu: "సాసి" };
+    const subtitles = {
+      English: "Scalable Analytical Smart-city Interface",
+      Hindi: "स्केलेबल एनालिटिकल स्मार्ट-सिटी इंटरफेस",
+      Telugu: "స్కేలబుల్ అనలిటికల్ స్మార్ట్-సిటీ ఇంటర్‌ఫేస్"
+    };
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
@@ -2347,7 +2475,7 @@ flex-direction: row;
           alt="Chat Icon"
           width="40"
           height="40"
-               />
+        />
       </div>
       <div id="chat-pop" class="chatbot-popup">
         <div class="chat-header">
@@ -2357,19 +2485,12 @@ flex-direction: row;
             alt="Chat Logo"
           />
           <div class="chat-title-container">
-    <div class="chat-title">SASI </div>
-    <div class="chat-subtitle">   Scalable Analytical Smart-city Interface
-    
-    </div>
-    
-  </div>
-  <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
-  
-          
+            <div class="chat-title">${titles[this.selectedLanguage]}</div>
+            <div class="chat-subtitle">${subtitles[this.selectedLanguage]}</div>
+          </div>
+          <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
         </div>
         <div id="message-container" class="messages"></div>
-  
-  
         ${this.conversationOptions && this.conversationOptions.length > 0 ? html`
           <div class="conversation-options">
             ${this.conversationOptions.map(option => html`
@@ -2382,7 +2503,6 @@ flex-direction: row;
             `)}
           </div>
         ` : ''}
-        
         ${this.recommendedQuestions && this.recommendedQuestions.length > 0 ? html`
           <div class="question-toggle">
             <button 
@@ -2393,7 +2513,6 @@ flex-direction: row;
               <span class="arrow-icon ${this.showRecommendedQuestions ? 'rotate' : ''}">▼</span>
             </button>
           </div>
-          
           ${this.showRecommendedQuestions ? html`
             <div class="recommended-questions">
               ${this.recommendedQuestions.map(question => html`
@@ -2406,22 +2525,33 @@ flex-direction: row;
               `)}
             </div>
           ` : ''}
-          
-          <!-- Add "or" text here -->
           <div class="question-divider">or</div>
         ` : ''}
-        
         <div class="input-area">
           <input
             @keydown="${this.handleKeyDown}"
             type="text"
             @input="${this.handleUserInput}"
             .value="${this.userInput}"
-            placeholder="Enter any question..."
+            placeholder="${this.selectedLanguage === 'English' ? 'Enter any question...' : (this.selectedLanguage === 'Telugu' ? 'ఏదైనా ప్రశ్నను నమోదు చేయండి...' : (this.selectedLanguage === 'Hindi' ? 'कोई भी प्रश्न दर्ज करें...' : 'Enter any question...'))}"
           />
-          <button id="send-button" @click="${this.sendMessage}">
-            <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="Send" class="send-icon">
+          <button id="send-button" @click="${this.sendMessage}" title="${this.selectedLanguage === 'English' ? 'Send' : (this.selectedLanguage === 'Telugu' ? 'పంపించండి' : (this.selectedLanguage === 'Hindi' ? 'भेजें' : 'Send'))}">
+            <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="${this.selectedLanguage === 'English' ? 'Send' : (this.selectedLanguage === 'Telugu' ? 'పంపించండి' : (this.selectedLanguage === 'Hindi' ? 'भेजें' : 'Send'))}" class="send-icon">
           </button>
+          <button id="translate-button" @click="${(e) => this.toggleLanguageDropdown(e)}" style="background: none; border: none; cursor: pointer; margin-left: 4px;">
+            <img src="https://res.cloudinary.com/dxoq1rrh4/image/upload/v1762950092/transalteimage_flaflk.png" alt="Translate" class="send-icon" style="width: 28px; height: 28px;" />
+          </button>
+          ${this.showLanguageDropdown
+            ? html`
+                <div style="position: absolute; bottom: 45px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                  ${languages.map(lang => html`
+                    <div style="padding: 8px 16px; cursor: pointer; ${this.selectedLanguage === lang ? 'background: #e6f0ff;' : ''}" @click="${() => this.selectLanguage(lang)}">
+                      ${lang}
+                    </div>
+                  `)}
+                </div>
+              `
+            : ''}
         </div>
       </div>
     `;
@@ -2429,3 +2559,5 @@ flex-direction: row;
 }
 
 customElements.define("chat-bot-component", ChatBotComponent);
+
+
