@@ -962,6 +962,36 @@ flex-direction: row;
   transition: opacity 0.3s ease;
 }
 
+/* Speaker icon styling */
+.speaker-icon {
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 8px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease, transform 0.2s ease;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.speaker-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.speaker-icon.playing {
+  opacity: 1;
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
 @media screen and (max-width: 480px) {
   .edit-message-icon {
     left: -20px;
@@ -1305,6 +1335,74 @@ flex-direction: row;
     this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.requestUpdate();
+  }
+
+  // Text-to-speech functionality
+  speakText(text, iconElement) {
+    // Cancel any ongoing speech
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      // Remove playing class from all icons
+      const allIcons = this.shadowRoot.querySelectorAll('.speaker-icon');
+      allIcons.forEach(icon => icon.classList.remove('playing'));
+      return;
+    }
+
+    // Clean the text - remove HTML tags and special characters
+    const cleanText = text
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&') // Replace HTML entities
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/●/g, '') // Remove loading dots
+      .trim();
+
+    if (!cleanText) {
+      console.warn('No text to speak');
+      return;
+    }
+
+    // Create speech synthesis utterance
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // Set language based on selected language
+    if (this.selectedLanguage === 'Telugu') {
+      utterance.lang = 'te-IN';
+    } else if (this.selectedLanguage === 'Hindi') {
+      utterance.lang = 'hi-IN';
+    } else {
+      utterance.lang = 'en-US';
+    }
+
+    // Set voice properties
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // Add playing class to icon
+    if (iconElement) {
+      iconElement.classList.add('playing');
+    }
+
+    // Event handlers
+    utterance.onend = () => {
+      if (iconElement) {
+        iconElement.classList.remove('playing');
+      }
+    };
+
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      if (iconElement) {
+        iconElement.classList.remove('playing');
+      }
+    };
+
+    // Speak the text
+    window.speechSynthesis.speak(utterance);
   }
 
   scrollToBottom() {
@@ -2429,6 +2527,17 @@ flex-direction: row;
           }
           messageContent.innerHTML = safeText.replace(/\n/g, "<br>");
         }
+
+        // Add speaker icon for all messages
+        const speakerIcon = document.createElement("span");
+        speakerIcon.className = "speaker-icon";
+        speakerIcon.innerHTML = "🔊";
+        speakerIcon.title = "Click to listen";
+        speakerIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.speakText(msg.text, speakerIcon);
+        });
+        messageContent.appendChild(speakerIcon);
 
         // Add edit icon for user messages
         if (msg.sender === 'user') {
