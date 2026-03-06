@@ -23,6 +23,20 @@ const HINDI_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNj
 const TELUGU_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/68d2468f08531bc3c5ccf47d";
 const TELUGU_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2OGQyNDY4ZjA4NTMxYmMzYzVjY2Y0N2QiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.Nu6weUuxHX2pssObR6yJOxJGqVQvS4oQPXbkJ4tR7To";
 
+
+// Speech-to-Text APIs
+const English_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67127dcbb1a6984f0c5e7d35";
+const English_TTS_Speech_Token = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2NzEyN2RjYmIxYTY5ODRmMGM1ZTdkMzUiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.AoIIAlJ7LfQCZHPi41thqei88_hshPo-Yb-K4AUMpJc";
+
+const Hindi_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67100d22a0397bc812dacb27";
+const Hindi_TTS_Speech_Token = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2NzEwMGQyMmEwMzk3YmM4MTJkYWNiMjciLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.hq7VMNmLJUdJbXSe77giN-SQkz1WCJCWRHHuHMKDBpw";
+
+const Telugu_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67b840e29c21bec07537674b";
+const Telugu_TTS_Speech_Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NDBlMjljMjFiZWMwNzUzNzY3NGIiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNFQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.gLW_y07Fn-VKRu4MXx_z9v9QD-2q9mMF153Q8mvrq_I";
+
+
+
+
 export class DataProcessor {
   constructor(data) {
     this.data = data;
@@ -1016,6 +1030,7 @@ flex-direction: row;
   transition: opacity 0.3s ease, transform 0.2s ease;
   display: inline-block;
   vertical-align: middle;
+  user-select: none;
 }
 
 .speaker-icon:hover {
@@ -1023,8 +1038,20 @@ flex-direction: row;
   transform: scale(1.1);
 }
 
+.speaker-icon.loading {
+  opacity: 1;
+  animation: tts-spin 0.9s linear infinite;
+  cursor: pointer;
+}
+
+@keyframes tts-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 .speaker-icon.playing {
   opacity: 1;
+  filter: brightness(0);
   animation: pulse 0.8s infinite;
 }
 
@@ -1181,6 +1208,9 @@ flex-direction: row;
     this.inAIQuestionMode = false;
     this.currentAudio = null; // Track current audio playback
     this.isBrowserTTSActive = false; // Track browser TTS state
+    this.isTTSLoading = false; // Track in-flight TTS API call
+    this.ttsAbortController = null; // AbortController for cancelling fetch
+    this.selectedGender = "female"; // TTS voice gender (male / female)
     
     // Number mapping for Hindi/Telugu
     this.numberMap = {
@@ -1244,6 +1274,13 @@ flex-direction: row;
 
   // Stop all audio playback
   stopAllAudio() {
+    // Cancel any in-flight TTS API request
+    if (this.ttsAbortController) {
+      this.ttsAbortController.abort();
+      this.ttsAbortController = null;
+    }
+    this.isTTSLoading = false;
+
     // Stop external TTS audio
     if (this.currentAudio) {
       this.currentAudio.pause();
@@ -1257,10 +1294,13 @@ flex-direction: row;
     }
     this.isBrowserTTSActive = false;
     
-    // Remove playing class from all icons
+    // Remove loading/playing classes and restore icon from all icons
     const allIcons = this.shadowRoot?.querySelectorAll('.speaker-icon');
     if (allIcons) {
-      allIcons.forEach(icon => icon.classList.remove('playing'));
+      allIcons.forEach(icon => {
+        icon.classList.remove('playing', 'loading');
+        icon.innerHTML = '🔊';
+      });
     }
     
     console.log('🛑 All audio stopped');
@@ -1545,17 +1585,35 @@ flex-direction: row;
     this.requestUpdate();
   }
 
+  // Helper function to convert English numerals to Hindi numerals
+  convertToHindiNumerals(text) {
+    const englishToHindi = {
+      '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
+      '5': '५', '6': '६', '7': '७', '8': '८', '9': '९'
+    };
+    return text.replace(/[0-9]/g, digit => englishToHindi[digit]);
+  }
+
+  // Helper function to convert English numerals to Telugu numerals
+  convertToTeluguNumerals(text) {
+    const englishToTelugu = {
+      '0': '౦', '1': '౧', '2': '౨', '3': '౩', '4': '౪',
+      '5': '౫', '6': '౬', '7': '౭', '8': '౮', '9': '౯'
+    };
+    return text.replace(/[0-9]/g, digit => englishToTelugu[digit]);
+  }
+
   // Text-to-speech functionality using external TTS APIs
   async speakText(text, iconElement) {
-    // Stop any ongoing audio if clicked again
-    if (this.currentAudio || this.isBrowserTTSActive) {
+    // Stop any ongoing/loading audio if clicked again
+    if (this.isTTSLoading || this.currentAudio || this.isBrowserTTSActive) {
       console.log('🛑 Stopping current audio...');
       this.stopAllAudio();
       return;
     }
 
     // Clean the text - remove HTML tags and special characters
-    const cleanText = text
+    let cleanText = text
       .replace(/<[^>]*>/g, '') // Remove HTML tags
       .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
       .replace(/&amp;/g, '&') // Replace HTML entities
@@ -1579,17 +1637,24 @@ flex-direction: row;
     if (this.selectedLanguage === 'Telugu') {
       apiUrl = TELUGU_TTS_API;
       accessToken = TELUGU_TTS_TOKEN;
+      // Convert English numerals to Telugu numerals for proper pronunciation
+      cleanText = this.convertToTeluguNumerals(cleanText);
     } else if (this.selectedLanguage === 'Hindi') {
       apiUrl = HINDI_TTS_API;
       accessToken = HINDI_TTS_TOKEN;
+      // Convert English numerals to Hindi numerals for proper pronunciation
+      cleanText = this.convertToHindiNumerals(cleanText);
     } else {
       apiUrl = ENGLISH_TTS_API;
       accessToken = ENGLISH_TTS_TOKEN;
     }
 
-    // Add playing class to icon
+    // Show loading state on icon
+    this.isTTSLoading = true;
+    this.ttsAbortController = new AbortController();
     if (iconElement) {
-      iconElement.classList.add('playing');
+      iconElement.innerHTML = '⏳';
+      iconElement.classList.add('loading');
     }
 
     try {
@@ -1600,8 +1665,10 @@ flex-direction: row;
           'access-token': accessToken
         },
         body: JSON.stringify({
-          input_text: cleanText
-        })
+          text: cleanText,
+          gender: this.selectedGender
+        }),
+        signal: this.ttsAbortController.signal
       });
 
       if (!response.ok) {
@@ -1611,15 +1678,24 @@ flex-direction: row;
       const data = await response.json();
       console.log('TTS API Response:', data);
 
-      if (data.status === 'success' && data.data?.audio_base64) {
-        // Convert base64 to audio and play
-        const audioData = data.data.audio_base64;
-        const audio = new Audio(`data:audio/wav;base64,${audioData}`);
+      // Switch from loading → playing
+      this.isTTSLoading = false;
+      this.ttsAbortController = null;
+      if (iconElement) {
+        iconElement.classList.remove('loading');
+        iconElement.innerHTML = '🔊';
+        iconElement.classList.add('playing');
+      }
+
+      if (data.status === 'success' && data.data?.s3_url) {
+        // Play audio from S3 URL
+        const audio = new Audio(data.data.s3_url);
         this.currentAudio = audio;
 
         audio.onended = () => {
           if (iconElement) {
             iconElement.classList.remove('playing');
+            iconElement.innerHTML = '🔊';
           }
           this.currentAudio = null;
           console.log('✓ Audio playback ended');
@@ -1628,7 +1704,8 @@ flex-direction: row;
         audio.onerror = (error) => {
           console.error('Audio playback error:', error);
           if (iconElement) {
-            iconElement.classList.remove('playing');
+            iconElement.classList.remove('playing', 'loading');
+            iconElement.innerHTML = '🔊';
           }
           this.currentAudio = null;
         };
@@ -1637,6 +1714,7 @@ flex-direction: row;
         audio.onpause = () => {
           if (iconElement) {
             iconElement.classList.remove('playing');
+            iconElement.innerHTML = '🔊';
           }
           console.log('🕇 Audio paused');
         };
@@ -1647,12 +1725,20 @@ flex-direction: row;
         throw new Error('No audio data received from TTS API');
       }
     } catch (error) {
-      console.error('TTS Error:', error);
+      this.isTTSLoading = false;
+      this.ttsAbortController = null;
       if (iconElement) {
-        iconElement.classList.remove('playing');
+        iconElement.classList.remove('playing', 'loading');
+        iconElement.innerHTML = '🔊';
       }
       this.currentAudio = null;
-      
+
+      if (error.name === 'AbortError') {
+        console.log('🛑 TTS request cancelled');
+        return;
+      }
+
+      console.error('TTS Error:', error);
       // Fallback to browser TTS
       console.log('Falling back to browser TTS...');
       this.fallbackToBrowserTTS(cleanText, iconElement);
