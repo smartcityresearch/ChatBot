@@ -1,11 +1,41 @@
+
 import {
   LitElement,
   html,
   css,
 } from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
-// Import Chart.js 
-import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+
+import "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+
 import { conversationTree } from "./conversation.js";
+
+// Translation APIs
+const ANUVAAD_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/6872172f4f34535ffa89b90f";
+const ANUVAAD_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2ODcyMTcyZjRmMzQ1MzVmZmE4OWI5MGYiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAwLCJhY2Nlc3Nfc3RhcnRfZGF0ZSI6IjIwMjUtMTAtMTRUMDA6MDA6MDAiLCJhY2Nlc3NfZW5kX2RhdGUiOiIyMDUwLTEwLTE0VDIzOjU5OjU5IiwiaGFzaGVkX3Bhc3N3b3JkIjoiJDJiJDEyJGpFSVpCcWNteDUxQ1F2RDV3WDFjdnVxZkJVSUR4V2RBYk9IaUpheTVGNHlZMGt3YmU5SVJLIiwiZXhwIjoyNTQ5NDA0Nzk5fQ.086W_U9k_0IUvW1YYwsXLJ00iq3VJ3BZr3ypERCwRvg";
+const HINDI_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/67b86729b5cc0eb92316383c";
+const HINDI_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NjcyOWI1Y2MwZWI5MjMxNjM4M2MiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.SQkL_blT2Cu0yLDunDhXrlvWhAtll0om36OaqVyd9uo";
+
+// Text-to-Speech APIs
+const ENGLISH_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/67bca8b3e0b95a6a1ea34a93";
+const ENGLISH_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2JjYThiM2UwYjk1YTZhMWVhMzRhOTMiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.8EO1a9xnUE0bU9BAickyu1whQCk6hWQxF7C05c1cVys";
+const HINDI_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/68c1244c747a9002950e94f8";
+const HINDI_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2OGMxMjQ0Yzc0N2E5MDAyOTUwZTk0ZjgiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.56tteBTW8g5Yl5HyKRpKbZA0oX0fGAN4qkg2NQzpYqY";
+const TELUGU_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/68d2468f08531bc3c5ccf47d";
+const TELUGU_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2OGQyNDY4ZjA4NTMxYmMzYzVjY2Y0N2QiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.Nu6weUuxHX2pssObR6yJOxJGqVQvS4oQPXbkJ4tR7To";
+
+
+// Speech-to-Text APIs
+const English_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67127dcbb1a6984f0c5e7d35";
+const English_TTS_Speech_Token = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2NzEyN2RjYmIxYTY5ODRmMGM1ZTdkMzUiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.AoIIAlJ7LfQCZHPi41thqei88_hshPo-Yb-K4AUMpJc";
+
+const Hindi_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67100d22a0397bc812dacb27";
+const Hindi_TTS_Speech_Token = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2NzEwMGQyMmEwMzk3YmM4MTJkYWNiMjciLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.hq7VMNmLJUdJbXSe77giN-SQkz1WCJCWRHHuHMKDBpw";
+
+const Telugu_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67b840e29c21bec07537674b";
+const Telugu_TTS_Speech_Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NDBlMjljMjFiZWMwNzUzNzY3NGIiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNFQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.gLW_y07Fn-VKRu4MXx_z9v9QD-2q9mMF153Q8mvrq_I";
+
+
+
 
 export class DataProcessor {
   constructor(data) {
@@ -509,6 +539,42 @@ img.icon-image {
   height: 30px;
 }
 
+/* Mic button styling */
+#mic-button {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+#mic-button:hover {
+  transform: scale(1.1);
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+#mic-button.listening {
+  background-color: rgba(220, 53, 69, 0.15);
+  animation: mic-pulse 0.8s infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220,53,69,0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(220,53,69,0); }
+}
+
+.mic-icon {
+  width: 24px;
+  height: 24px;
+}
+
 /* Question toggle section */
 .question-toggle {
   display: flex;
@@ -955,6 +1021,49 @@ flex-direction: row;
   transition: opacity 0.3s ease;
 }
 
+/* Speaker icon styling */
+.speaker-icon {
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 8px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease, transform 0.2s ease;
+  display: inline-block;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.speaker-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.speaker-icon.loading {
+  opacity: 1;
+  animation: tts-spin 0.9s linear infinite;
+  cursor: pointer;
+}
+
+@keyframes tts-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.speaker-icon.playing {
+  opacity: 1;
+  filter: brightness(0);
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
 @media screen and (max-width: 480px) {
   .edit-message-icon {
     left: -20px;
@@ -1092,7 +1201,288 @@ flex-direction: row;
     this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.currentChart = null;
+    this.showLanguageDropdown = false;
+    this.selectedLanguage = "English";
+    this.isListening = false;
+    this.recognition = null;
+    this.inAIQuestionMode = false;
+    this.currentAudio = null; // Track current audio playback
+    this.isBrowserTTSActive = false; // Track browser TTS state
+    this.isTTSLoading = false; // Track in-flight TTS API call
+    this.ttsAbortController = null; // AbortController for cancelling fetch
+    this.selectedGender = "female"; // TTS voice gender (male / female)
+    
+    // Number mapping for Hindi/Telugu
+    this.numberMap = {
+      // Hindi numbers
+      'एक': '1', 'ek': '1',
+      'दो': '2', 'do': '2',
+      'तीन': '3', 'teen': '3',
+      'चार': '4', 'chaar': '4', 'char': '4',
+      'पांच': '5', 'paanch': '5', 'panch': '5',
+      'छे': '6', 'chhah': '6', 'chah': '6',
+      'सात': '7', 'saat': '7',
+      'आठ': '8', 'aath': '8', 'ath': '8',
+      'नाउ': '9', 'nau': '9',
+      'दस': '10', 'das': '10',
+      // Telugu numbers
+      'ఒకటి': '1', 'okati': '1',
+      'రెండు': '2', 'rendu': '2',
+      'మూడు': '3', 'moodu': '3',
+      'నాలుగు': '4', 'naalugu': '4',
+      'ఐదు': '5', 'aidu': '5',
+      'ఆరు': '6', 'aaru': '6',
+      'ఏడు': '7', 'edu': '7',
+      'ఎనిమిది': '8', 'enimidi': '8',
+      'తొమ్మిది': '9', 'tommidi': '9',
+      'పది': '10', 'padi': '10'
+    };
   }
+
+  // Lifecycle: setup when component is connected
+  connectedCallback() {
+    super.connectedCallback();
+    
+    // Stop audio on page unload/refresh
+    this.handleBeforeUnload = () => {
+      this.stopAllAudio();
+    };
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
+    
+    // Also stop on visibility change (tab switch)
+    this.handleVisibilityChange = () => {
+      if (document.hidden) {
+        this.stopAllAudio();
+      }
+    };
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+  }
+
+  // Lifecycle: cleanup when component is removed
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.stopAllAudio();
+    
+    // Remove event listeners
+    if (this.handleBeforeUnload) {
+      window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    }
+    if (this.handleVisibilityChange) {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+  }
+
+  // Stop all audio playback
+  stopAllAudio() {
+    // Cancel any in-flight TTS API request
+    if (this.ttsAbortController) {
+      this.ttsAbortController.abort();
+      this.ttsAbortController = null;
+    }
+    this.isTTSLoading = false;
+
+    // Stop external TTS audio
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
+    
+    // Stop browser TTS
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+    this.isBrowserTTSActive = false;
+    
+    // Remove loading/playing classes and restore icon from all icons
+    const allIcons = this.shadowRoot?.querySelectorAll('.speaker-icon');
+    if (allIcons) {
+      allIcons.forEach(icon => {
+        icon.classList.remove('playing', 'loading');
+        icon.innerHTML = '🔊';
+      });
+    }
+    
+    console.log('🛑 All audio stopped');
+  }
+
+  // --- VOICE INPUT ---
+  startVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      return;
+    }
+    if (this.isListening) {
+      this.recognition && this.recognition.stop();
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    this.recognition = recognition;
+    recognition.lang = this.selectedLanguage === 'Telugu' ? 'te-IN'
+      : this.selectedLanguage === 'Hindi' ? 'hi-IN' : 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    this.isListening = true;
+    this.requestUpdate();
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0].transcript)
+        .join('')
+        .replace(/[.।]$/, '')
+        .trim();
+      
+      // Convert spoken numbers to digits
+      const convertedText = this.convertNumbersToDigits(transcript);
+      this.userInput = convertedText;
+      this.requestUpdate();
+    };
+    recognition.onend = () => {
+      this.isListening = false;
+      this.requestUpdate();
+    };
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      this.isListening = false;
+      this.requestUpdate();
+    };
+    recognition.start();
+  }
+
+  // --- TRANSLATION METHODS ---
+  containsTelugu(text) {
+    return /[\u0C00-\u0C7F]/.test(text || "");
+  }
+
+  containsHindi(text) {
+    return /[\u0900-\u097F]/.test(text || "");
+  }
+
+  // Convert spoken numbers in Hindi/Telugu to English digits
+  convertNumbersToDigits(text) {
+    if (!text) return text;
+    
+    let result = text;
+    const words = text.toLowerCase().split(/\s+/);
+    
+    // Replace each word if it matches a number
+    words.forEach(word => {
+      const cleanWord = word.trim();
+      if (this.numberMap[cleanWord]) {
+        // Use word boundary regex to replace whole words only
+        const regex = new RegExp(`\\b${cleanWord}\\b`, 'gi');
+        result = result.replace(regex, this.numberMap[cleanWord]);
+      }
+    });
+    
+    // Also check for Telugu/Hindi characters directly
+    Object.keys(this.numberMap).forEach(key => {
+      if (key.match(/[\u0900-\u097F\u0C00-\u0C7F]/)) {
+        const regex = new RegExp(key, 'g');
+        if (result.includes(key)) {
+          result = result.replace(regex, this.numberMap[key]);
+        }
+      }
+    });
+    
+    console.log('Number conversion:', text, '→', result);
+    return result;
+  }
+
+  async translateText(inputText) {
+    if (!inputText?.trim()) return inputText;
+    let apiUrl, accessToken;
+    if (this.selectedLanguage === "Telugu") {
+      apiUrl = ANUVAAD_TRANSLATION_API;
+      accessToken = ANUVAAD_ACCESS_TOKEN;
+    } else if (this.selectedLanguage === "Hindi") {
+      apiUrl = HINDI_TRANSLATION_API;
+      accessToken = HINDI_ACCESS_TOKEN;
+    } else {
+      return inputText;
+    }
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "access-token": accessToken,
+        },
+        body: JSON.stringify({ input_text: inputText }),
+      });
+      if (!response.ok) throw new Error(`Translation API response ${response.status}`);
+      const payload = await response.json();
+      return payload?.data?.output_text ?? inputText;
+    } catch (error) {
+      console.error("Translation error:", error);
+      return inputText;
+    }
+  }
+
+  async localizeBotText(text) {
+    if (this.selectedLanguage === "English" || !text?.trim() || text.includes("<")) return text;
+    const translated = await this.translateText(text);
+    if (this.selectedLanguage === "Telugu") {
+      return this.containsTelugu(translated) ? translated : text;
+    } else if (this.selectedLanguage === "Hindi") {
+      return this.containsHindi(translated) ? translated : text;
+    }
+    return text;
+  }
+
+  async localizeUserInputForBackend(inputText) {
+    if (this.selectedLanguage === "English") {
+      return { displayText: inputText, backendText: inputText };
+    }
+    const translated = await this.translateText(inputText);
+    let inputHasTargetLanguage, translatedHasTargetLanguage;
+    if (this.selectedLanguage === "Telugu") {
+      inputHasTargetLanguage = this.containsTelugu(inputText);
+      translatedHasTargetLanguage = this.containsTelugu(translated);
+    } else if (this.selectedLanguage === "Hindi") {
+      inputHasTargetLanguage = this.containsHindi(inputText);
+      translatedHasTargetLanguage = this.containsHindi(translated);
+    }
+    return {
+      displayText: !inputHasTargetLanguage && translatedHasTargetLanguage ? translated : inputText,
+      backendText: inputHasTargetLanguage && !translatedHasTargetLanguage ? translated : inputText,
+    };
+  }
+
+  async addLocalizedBotMessage(text) {
+    const localized = await this.localizeBotText(text);
+    this.addMessage(localized, "bot");
+  }
+
+  toggleLanguageDropdown(e) {
+    if (e) e.stopPropagation();
+    this.showLanguageDropdown = !this.showLanguageDropdown;
+    this.requestUpdate();
+  }
+
+  async selectLanguage(language) {
+    this.selectedLanguage = language;
+    this.showLanguageDropdown = false;
+    this.requestUpdate();
+    await this.relocalizeAllMessages();
+    // Force re-render to update all static UI text
+    this.requestUpdate();
+  }
+
+  async relocalizeAllMessages() {
+    // Re-translate all previous messages to the selected language
+    for (let i = 0; i < this.messages.length; i++) {
+      const msg = this.messages[i];
+      if (msg.sender === 'bot') {
+        this.messages[i].text = await this.localizeBotText(msg.text);
+      } else if (msg.sender === 'user') {
+        // Translate user message to selected language
+        this.messages[i].text = await this.translateText(msg.text);
+      }
+    }
+    this.requestUpdate();
+  }
+
   startEditMessage(index) {
     // Only allow editing user messages
     if (this.messages[index].sender === 'user') {
@@ -1137,7 +1527,8 @@ flex-direction: row;
     }, 500);
 
     try {
-      const response = await this.sendMessageToBackend(this.editedMessage.trim());
+      const { backendText: editedBackendText } = await this.localizeUserInputForBackend(this.editedMessage.trim());
+      const response = await this.sendMessageToBackend(editedBackendText);
       clearInterval(loadingInterval);
 
       const lowerMsg = this.editedMessage.toLowerCase();
@@ -1192,6 +1583,209 @@ flex-direction: row;
     this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.requestUpdate();
+  }
+
+  // Helper function to convert English numerals to Hindi numerals
+  convertToHindiNumerals(text) {
+    const englishToHindi = {
+      '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
+      '5': '५', '6': '६', '7': '७', '8': '८', '9': '९'
+    };
+    return text.replace(/[0-9]/g, digit => englishToHindi[digit]);
+  }
+
+  // Helper function to convert English numerals to Telugu numerals
+  convertToTeluguNumerals(text) {
+    const englishToTelugu = {
+      '0': '౦', '1': '౧', '2': '౨', '3': '౩', '4': '౪',
+      '5': '౫', '6': '౬', '7': '౭', '8': '౮', '9': '౯'
+    };
+    return text.replace(/[0-9]/g, digit => englishToTelugu[digit]);
+  }
+
+  // Text-to-speech functionality using external TTS APIs
+  async speakText(text, iconElement) {
+    // Stop any ongoing/loading audio if clicked again
+    if (this.isTTSLoading || this.currentAudio || this.isBrowserTTSActive) {
+      console.log('🛑 Stopping current audio...');
+      this.stopAllAudio();
+      return;
+    }
+
+    // Clean the text - remove HTML tags and special characters
+    let cleanText = text
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&') // Replace HTML entities
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/●/g, '') // Remove loading dots
+      .replace(/🔊/g, '') // Remove speaker emoji
+      .trim();
+
+    if (!cleanText) {
+      console.warn('No text to speak');
+      return;
+    }
+
+    console.log('🔊 TTS Request:', cleanText, 'Language:', this.selectedLanguage);
+
+    // Get TTS API details based on selected language
+    let apiUrl, accessToken;
+    if (this.selectedLanguage === 'Telugu') {
+      apiUrl = TELUGU_TTS_API;
+      accessToken = TELUGU_TTS_TOKEN;
+      // Convert English numerals to Telugu numerals for proper pronunciation
+      cleanText = this.convertToTeluguNumerals(cleanText);
+    } else if (this.selectedLanguage === 'Hindi') {
+      apiUrl = HINDI_TTS_API;
+      accessToken = HINDI_TTS_TOKEN;
+      // Convert English numerals to Hindi numerals for proper pronunciation
+      cleanText = this.convertToHindiNumerals(cleanText);
+    } else {
+      apiUrl = ENGLISH_TTS_API;
+      accessToken = ENGLISH_TTS_TOKEN;
+    }
+
+    // Show loading state on icon
+    this.isTTSLoading = true;
+    this.ttsAbortController = new AbortController();
+    if (iconElement) {
+      iconElement.innerHTML = '⏳';
+      iconElement.classList.add('loading');
+    }
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access-token': accessToken
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          gender: this.selectedGender
+        }),
+        signal: this.ttsAbortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('TTS API Response:', data);
+
+      // Switch from loading → playing
+      this.isTTSLoading = false;
+      this.ttsAbortController = null;
+      if (iconElement) {
+        iconElement.classList.remove('loading');
+        iconElement.innerHTML = '🔊';
+        iconElement.classList.add('playing');
+      }
+
+      if (data.status === 'success' && data.data?.s3_url) {
+        // Play audio from S3 URL
+        const audio = new Audio(data.data.s3_url);
+        this.currentAudio = audio;
+
+        audio.onended = () => {
+          if (iconElement) {
+            iconElement.classList.remove('playing');
+            iconElement.innerHTML = '🔊';
+          }
+          this.currentAudio = null;
+          console.log('✓ Audio playback ended');
+        };
+
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          if (iconElement) {
+            iconElement.classList.remove('playing', 'loading');
+            iconElement.innerHTML = '🔊';
+          }
+          this.currentAudio = null;
+        };
+
+        // Listen for pause event (manual stop)
+        audio.onpause = () => {
+          if (iconElement) {
+            iconElement.classList.remove('playing');
+            iconElement.innerHTML = '🔊';
+          }
+          console.log('🕇 Audio paused');
+        };
+
+        await audio.play();
+        console.log('✓ Audio playing successfully');
+      } else {
+        throw new Error('No audio data received from TTS API');
+      }
+    } catch (error) {
+      this.isTTSLoading = false;
+      this.ttsAbortController = null;
+      if (iconElement) {
+        iconElement.classList.remove('playing', 'loading');
+        iconElement.innerHTML = '🔊';
+      }
+      this.currentAudio = null;
+
+      if (error.name === 'AbortError') {
+        console.log('🛑 TTS request cancelled');
+        return;
+      }
+
+      console.error('TTS Error:', error);
+      // Fallback to browser TTS
+      console.log('Falling back to browser TTS...');
+      this.fallbackToBrowserTTS(cleanText, iconElement);
+    }
+  }
+
+  // Fallback to browser's speech synthesis if external TTS fails
+  fallbackToBrowserTTS(text, iconElement) {
+    // Mark browser TTS as active
+    this.isBrowserTTSActive = true;
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    if (this.selectedLanguage === 'Telugu') {
+      utterance.lang = 'te-IN';
+    } else if (this.selectedLanguage === 'Hindi') {
+      utterance.lang = 'hi-IN';
+    } else {
+      utterance.lang = 'en-US';
+    }
+
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    if (iconElement) {
+      iconElement.classList.add('playing');
+    }
+
+    utterance.onend = () => {
+      if (iconElement) {
+        iconElement.classList.remove('playing');
+      }
+      this.isBrowserTTSActive = false;
+      console.log('✓ Browser TTS ended');
+    };
+
+    utterance.onerror = (event) => {
+      console.error('Fallback TTS error:', event);
+      if (iconElement) {
+        iconElement.classList.remove('playing');
+      }
+      this.isBrowserTTSActive = false;
+    };
+
+    window.speechSynthesis.speak(utterance);
+    console.log('🔊 Browser TTS started');
   }
 
   scrollToBottom() {
@@ -1416,6 +2010,8 @@ flex-direction: row;
   async sendMessage() {
     const userInputTrimmed = this.userInput.trim();
     if (!userInputTrimmed) return;
+    // Translation: localize user input for backend and display
+    const { displayText, backendText } = await this.localizeUserInputForBackend(userInputTrimmed);
 
     // Helper: handle loading dots
     const startLoading = () => {
@@ -1447,6 +2043,7 @@ flex-direction: row;
         this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
         this.currentOptions = [];
         this.stringInput = true;
+        this.inAIQuestionMode = true;
         this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
         this.requestUpdate();
       } else if (input === "3") {
@@ -1532,6 +2129,7 @@ flex-direction: row;
         this.currentOptions = nextNode.options || [];
         if (nextNodeKey === "AskQuestionNode") {
           this.stringInput = true;
+          this.inAIQuestionMode = true;
           this.recommendedQuestions = nextNode.recommendedQuestions || [];
           this.conversationOptions = this.currentOptions;
           this.requestUpdate();
@@ -1544,16 +2142,20 @@ flex-direction: row;
       } else {
         responseMessage = "Error: Invalid next node";
       }
+      if (typeof responseMessage === 'string' && responseMessage.trim() && this.selectedLanguage !== 'English') {
+        responseMessage = await this.localizeBotText(responseMessage);
+      }
       this.addMessage(responseMessage, "bot");
     };
 
     // Main logic
     if (this.stringInput) {
       this.stringInput = false;
-      this.addMessage(userInputTrimmed, "user");
+      this.addMessage(displayText, "user");
       const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
 
-      if (lastBotMessage.includes("Please enter your question:")) {
+      if (lastBotMessage.includes("Please enter your question:") || this.inAIQuestionMode) {
+        this.inAIQuestionMode = false;
         let loadingInterval = startLoading();
         try {
           const temporalDataKeywords = [
@@ -1564,7 +2166,7 @@ flex-direction: row;
           const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
           const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
 
-          const response = await this.sendMessageToBackend(userInputTrimmed);
+          const response = await this.sendMessageToBackend(backendText);
           let responseData;
           try {
             responseData = typeof response === 'string' ? JSON.parse(response) : response;
@@ -1587,7 +2189,8 @@ flex-direction: row;
 
           if (isTemporalDataQuery && isTempHumidityQuery) {
             const iconId = `visualizeIcon_${Date.now()}`;
-            this.addMessage(`${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(`${localizedResponse}\n\n<div id="${iconId}" class="visualization-icon">
                     <img src="/static/images/bar1.png" alt="Visualize" />
                   </div>`, "bot");
             setTimeout(() => {
@@ -1599,15 +2202,14 @@ flex-direction: row;
                 });
               }
             }, 100);
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
+            const localizedFollowup = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
+            this.addMessage(localizedFollowup, "bot");
             setBotOptions("QuestionResponseOptionsNode");
           } else if (isTempHumidityQuery && isLocationValid) {
             const indoorButtonId = `indoorButton_${Date.now()}`;
             const outdoorButtonId = `outdoorButton_${Date.now()}`;
-            this.addMessage(`${responseData.response}\n\n<div class="location-buttons">
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(`${localizedResponse}\n\n<div class="location-buttons">
                   <button id="${indoorButtonId}" class="location-btn">Indoor</button>
                   <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
                 </div>`, "bot");
@@ -1618,17 +2220,18 @@ flex-direction: row;
               if (outdoorButton) outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
             }, 100);
           } else {
-            this.addMessage(responseData.response, "bot");
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(localizedResponse, "bot");
+            const localizedFollowup = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
+            this.addMessage(localizedFollowup, "bot");
             setBotOptions("QuestionResponseOptionsNode");
           }
         } catch (error) {
           if (loadingInterval) clearInterval(loadingInterval);
-          this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
-          this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
+          const localizedError = await this.localizeBotText("Sorry, I couldn't process your question. Please try again.");
+          this.addMessage(localizedError, "bot");
+          const localizedMainMenu = await this.localizeBotText(conversationTree.nodes.MainMenu.message);
+          this.addMessage(localizedMainMenu, "bot");
           this.currentOptions = conversationTree.nodes.MainMenu.options;
           this.recommendedQuestions = [];
           this.conversationOptions = [];
@@ -1647,13 +2250,15 @@ flex-direction: row;
     const selectedOption = this.currentOptions.find(
       (option) => option.text === userInputTrimmed
     );
-    this.addMessage(userInputTrimmed, "user");
+    this.addMessage(displayText, "user");
     if (selectedOption) {
       await handleOptionSelection(selectedOption);
     } else {
-      this.addMessage("Error: Invalid option selected", "bot");
+      const localizedError = await this.localizeBotText("Error: Invalid option selected");
+      this.addMessage(localizedError, "bot");
       const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
-      this.addMessage(lastCorrectMessage.text, "bot");
+      const localizedLastCorrect = await this.localizeBotText(lastCorrectMessage.text);
+      this.addMessage(localizedLastCorrect, "bot");
     }
     this.resetInputAndPopulateMessages();
   }
@@ -2309,6 +2914,17 @@ flex-direction: row;
           messageContent.innerHTML = safeText.replace(/\n/g, "<br>");
         }
 
+        // Add speaker icon for all messages
+        const speakerIcon = document.createElement("span");
+        speakerIcon.className = "speaker-icon";
+        speakerIcon.innerHTML = "🔊";
+        speakerIcon.title = "Click to listen";
+        speakerIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.speakText(msg.text, speakerIcon);
+        });
+        messageContent.appendChild(speakerIcon);
+
         // Add edit icon for user messages
         if (msg.sender === 'user') {
           const editIcon = document.createElement("span");
@@ -2340,6 +2956,13 @@ flex-direction: row;
   // Modify the render method to implement the toggle button and conditional display
   // Modify the render method to implement the requested changes
   render() {
+    const languages = ["English", "Hindi", "Telugu"];
+    const titles = { English: "SASI", Hindi: "सासी", Telugu: "సాసి" };
+    const subtitles = {
+      English: "Scalable Analytical Smart-city Interface",
+      Hindi: "स्केलेबल एनालिटिकल स्मार्ट-सिटी इंटरफेस",
+      Telugu: "స్కేలబుల్ అనలిటికల్ స్మార్ట్-సిటీ ఇంటర్‌ఫేస్"
+    };
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
@@ -2347,7 +2970,7 @@ flex-direction: row;
           alt="Chat Icon"
           width="40"
           height="40"
-               />
+        />
       </div>
       <div id="chat-pop" class="chatbot-popup">
         <div class="chat-header">
@@ -2357,19 +2980,12 @@ flex-direction: row;
             alt="Chat Logo"
           />
           <div class="chat-title-container">
-    <div class="chat-title">SASI </div>
-    <div class="chat-subtitle">   Scalable Analytical Smart-city Interface
-    
-    </div>
-    
-  </div>
-  <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
-  
-          
+            <div class="chat-title">${titles[this.selectedLanguage]}</div>
+            <div class="chat-subtitle">${subtitles[this.selectedLanguage]}</div>
+          </div>
+          <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
         </div>
         <div id="message-container" class="messages"></div>
-  
-  
         ${this.conversationOptions && this.conversationOptions.length > 0 ? html`
           <div class="conversation-options">
             ${this.conversationOptions.map(option => html`
@@ -2382,7 +2998,6 @@ flex-direction: row;
             `)}
           </div>
         ` : ''}
-        
         ${this.recommendedQuestions && this.recommendedQuestions.length > 0 ? html`
           <div class="question-toggle">
             <button 
@@ -2393,7 +3008,6 @@ flex-direction: row;
               <span class="arrow-icon ${this.showRecommendedQuestions ? 'rotate' : ''}">▼</span>
             </button>
           </div>
-          
           ${this.showRecommendedQuestions ? html`
             <div class="recommended-questions">
               ${this.recommendedQuestions.map(question => html`
@@ -2406,22 +3020,36 @@ flex-direction: row;
               `)}
             </div>
           ` : ''}
-          
-          <!-- Add "or" text here -->
           <div class="question-divider">or</div>
         ` : ''}
-        
         <div class="input-area">
           <input
             @keydown="${this.handleKeyDown}"
             type="text"
             @input="${this.handleUserInput}"
             .value="${this.userInput}"
-            placeholder="Enter any question..."
+            placeholder="${this.selectedLanguage === 'English' ? 'Enter any question...' : (this.selectedLanguage === 'Telugu' ? 'ఏదైనా ప్రశ్నను నమోదు చేయండి...' : (this.selectedLanguage === 'Hindi' ? 'कोई भी प्रश्न दर्ज करें...' : 'Enter any question...'))}"
           />
-          <button id="send-button" @click="${this.sendMessage}">
-            <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="Send" class="send-icon">
+          <button id="mic-button" @click="${this.startVoiceInput}" class="${this.isListening ? 'listening' : ''}" title="${this.selectedLanguage === 'English' ? 'Voice Input' : (this.selectedLanguage === 'Telugu' ? 'వాయిస్ ఇన్‌పుట్' : (this.selectedLanguage === 'Hindi' ? 'वॉइस इनपुट' : 'Voice Input'))}">
+            <img src="https://cdn-icons-png.flaticon.com/512/4980/4980251.png" alt="Microphone" class="mic-icon" style="${this.isListening ? 'filter: hue-rotate(330deg) saturate(3) brightness(0.8);' : ''}">
           </button>
+          <button id="send-button" @click="${this.sendMessage}" title="${this.selectedLanguage === 'English' ? 'Send' : (this.selectedLanguage === 'Telugu' ? 'పంపించండి' : (this.selectedLanguage === 'Hindi' ? 'भेजें' : 'Send'))}">
+            <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="${this.selectedLanguage === 'English' ? 'Send' : (this.selectedLanguage === 'Telugu' ? 'పంపించండి' : (this.selectedLanguage === 'Hindi' ? 'भेజें' : 'Send'))}" class="send-icon">
+          </button>
+          <button id="translate-button" @click="${(e) => this.toggleLanguageDropdown(e)}" style="background: none; border: none; cursor: pointer; margin-left: 4px;">
+            <img src="https://res.cloudinary.com/dxoq1rrh4/image/upload/v1762950092/transalteimage_flaflk.png" alt="Translate" class="send-icon" style="width: 28px; height: 28px;" />
+          </button>
+          ${this.showLanguageDropdown
+            ? html`
+                <div style="position: absolute; bottom: 45px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                  ${languages.map(lang => html`
+                    <div style="padding: 8px 16px; cursor: pointer; ${this.selectedLanguage === lang ? 'background: #e6f0ff;' : ''}" @click="${() => this.selectLanguage(lang)}">
+                      ${lang}
+                    </div>
+                  `)}
+                </div>
+              `
+            : ''}
         </div>
       </div>
     `;
@@ -2429,3 +3057,7 @@ flex-direction: row;
 }
 
 customElements.define("chat-bot-component", ChatBotComponent);
+
+
+
+
