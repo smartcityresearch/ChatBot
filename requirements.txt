@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+langchain
+langchain-community
+langchain-core
+langchain-openai
+openai
+tiktoken
+pydantic
+requests
+html2text
+python-dotenv
+aiohttp
+pytz
+mistralai==0.0.7

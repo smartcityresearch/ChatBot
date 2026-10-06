@@ -1,0 +1,48 @@
+name: Version Control and Release
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  version-control:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install go-semantic-release
+        id: semantic_release
+        uses: go-semantic-release/action@v1
+        with:
+          github-token: ${{ secrets.GIT_TOKEN }}
+
+      - name: Capture new version
+        id: capture_version
+        run: |
+          # Extract the new version from the semantic release output
+          NEW_VERSION=$(cat .generated-go-semantic-release-changelog.md | grep -oP '(?<=## )\d+\.\d+\.\d+')
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version captured: $NEW_VERSION"
+
+      - name: Debug new version
+        run: echo "New version is $NEW_VERSION"
+
+      - name: Create GitHub Release
+        if: steps.semantic_release.outputs.new_release_published == 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          name: Release ${{ steps.semantic_release.outputs.new_version }}
+          tag_name: ${{ steps.semantic_release.outputs.new_version }}
+          body: |
+            See the full release notes at: https://github.com/${{ github.repository }}/releases/tag/${{ steps.semantic_release.outputs.new_version }}

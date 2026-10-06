@@ -1,111 +1,111 @@
 
-
-
 import {
   LitElement,
   html,
   css,
 } from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
-// Import Chart.js 
-import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+
+import "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+
 import { conversationTree } from "./conversation.js";
 
-class DataProcessor {
+// Translation APIs
+const ANUVAAD_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/6872172f4f34535ffa89b90f";
+const ANUVAAD_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2ODcyMTcyZjRmMzQ1MzVmZmE4OWI5MGYiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAwLCJhY2Nlc3Nfc3RhcnRfZGF0ZSI6IjIwMjUtMTAtMTRUMDA6MDA6MDAiLCJhY2Nlc3NfZW5kX2RhdGUiOiIyMDUwLTEwLTE0VDIzOjU5OjU5IiwiaGFzaGVkX3Bhc3N3b3JkIjoiJDJiJDEyJGpFSVpCcWNteDUxQ1F2RDV3WDFjdnVxZkJVSUR4V2RBYk9IaUpheTVGNHlZMGt3YmU5SVJLIiwiZXhwIjoyNTQ5NDA0Nzk5fQ.086W_U9k_0IUvW1YYwsXLJ00iq3VJ3BZr3ypERCwRvg";
+const HINDI_TRANSLATION_API = "https://canvas.iiit.ac.in/sandboxbeprod/check_model_status_and_infer/67b86729b5cc0eb92316383c";
+const HINDI_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NjcyOWI1Y2MwZWI5MjMxNjM4M2MiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.SQkL_blT2Cu0yLDunDhXrlvWhAtll0om36OaqVyd9uo";
+
+// Text-to-Speech APIs
+const ENGLISH_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/67bca8b3e0b95a6a1ea34a93";
+const ENGLISH_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2JjYThiM2UwYjk1YTZhMWVhMzRhOTMiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.8EO1a9xnUE0bU9BAickyu1whQCk6hWQxF7C05c1cVys";
+const HINDI_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/68c1244c747a9002950e94f8";
+const HINDI_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2OGMxMjQ0Yzc0N2E5MDAyOTUwZTk0ZjgiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.56tteBTW8g5Yl5HyKRpKbZA0oX0fGAN4qkg2NQzpYqY";
+const TELUGU_TTS_API = "https://canvas.iiit.ac.in/sandboxbeprod/generate_tts/68d2468f08531bc3c5ccf47d";
+const TELUGU_TTS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2OGQyNDY4ZjA4NTMxYmMzYzVjY2Y0N2QiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.Nu6weUuxHX2pssObR6yJOxJGqVQvS4oQPXbkJ4tR7To";
+
+
+// Speech-to-Text APIs
+const English_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67127dcbb1a6984f0c5e7d35";
+const English_TTS_Speech_Token = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2NzEyN2RjYmIxYTY5ODRmMGM1ZTdkMzUiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.AoIIAlJ7LfQCZHPi41thqei88_hshPo-Yb-K4AUMpJc";
+
+const Hindi_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67100d22a0397bc812dacb27";
+const Hindi_TTS_Speech_Token = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2NzEwMGQyMmEwMzk3YmM4MTJkYWNiMjciLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNlQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.hq7VMNmLJUdJbXSe77giN-SQkz1WCJCWRHHuHMKDBpw";
+
+const Telugu_TTS_Speech_API_KEY = "https://canvas.iiit.ac.in/sandboxbeprod/infer_asr/67b840e29c21bec07537674b";
+const Telugu_TTS_Speech_Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhlY2U2YzRiZDY0MmU4N2IxMzAwMjAxIiwibW9kZWxfaWQiOiI2N2I4NDBlMjljMjFiZWMwNzUzNzY3NGIiLCJyZXF1ZXN0c19wZXJfbWludXRlIjoxNTAsImFjY2Vzc19zdGFydF9kYXRlIjoiMjAyNS0xMC0xNFQwMDowMDowMCIsImFjY2Vzc19lbmRfZGF0ZSI6IjIwMzAtMTItMzFUMjM6NTk6NTkiLCJoYXNoZWRfcGFzc3dvcmQiOiIkMmIkMTIkakVJWkJxY214NTFDUXZENXdYMWN2dXFmQlVJRHhXZEFiT0hpSmF5NUY0eVkwa3diZTlJUksiLCJleHAiOjE5MjQ5OTE5OTl9.gLW_y07Fn-VKRu4MXx_z9v9QD-2q9mMF153Q8mvrq_I";
+
+
+
+
+export class DataProcessor {
   constructor(data) {
     this.data = data;
   }
 
-  static properties = {
-    // ... existing properties
-    editingMessageIndex: { type: Number },
-    editedMessage: { type: String }
-  };
-
-  // Parse the first numeric part of a string if applicable
   parseValue(value) {
-    const matches = value.match(/^[\d\.]+/);
-    if (matches) {
-      return parseFloat(matches[0]);
+    if (typeof value === 'string') {
+      const numericValue = parseFloat(value);
+      return isNaN(numericValue) ? value : numericValue;
     }
     return value;
   }
 
-  // Determines the mode (most frequently occurring value) in an array
   findMode(values) {
+    if (!Array.isArray(values) || values.length === 0) return undefined;
     const frequency = {};
     let maxFreq = 0;
-    let mode = values[0];
-    for (const value of values) {
+    let mode;
+    values.forEach(value => {
       frequency[value] = (frequency[value] || 0) + 1;
       if (frequency[value] > maxFreq) {
         maxFreq = frequency[value];
         mode = value;
       }
-    }
+    });
     return mode;
   }
 
-  // Calculates average for an array of numbers
   calculateAverage(values) {
-    const sum = values.reduce((acc, val) => acc + val, 0);
-    const average = sum / values.length;
-    return isNaN(average) ? undefined : average;
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    const numericValues = values
+      .map(v => this.parseValue(v))
+      .filter(v => typeof v === 'number');
+    return numericValues.length ?
+      numericValues.reduce((a, b) => a + b) / numericValues.length : 0;
   }
 
-  // General aggregation function
-  aggregateData(method) {
-    const ignoreKeys = [
-      "node_id",
-      "name",
-      "latitude",
-      "longitude",
-      "xcor",
-      "ycor",
-      "type",
-    ];
-    const results = {};
+  aggregateData(method = 'avg') {
+    const result = {};
+    const numericProperties = ['temperature', 'humidity', 'pollution'];
 
-    Object.keys(this.data[0])
-      .filter((key) => !ignoreKeys.includes(key))
-      .forEach((key) => {
-        const rawValues = this.data.map((node) => node[key]);
-        const values = rawValues.map(this.parseValue);
+    for (const prop of numericProperties) {
+      const values = this.data
+        .map(item => item[prop])
+        .filter(v => v !== undefined);
 
-        // Split data types
-        const numericValues = values.filter(
-          (value) => typeof value === "number"
-        );
-        const nonNumericValues = values.filter(
-          (value) => typeof value !== "number"
-        );
+      if (values.length === 0) continue;
 
-        if (numericValues.length === 0) {
-          results[key] = this.findMode(nonNumericValues);
-          return;
-        }
-        switch (method) {
-          case "avg":
-            results[key] = this.calculateAverage(numericValues);
-            break;
-          case "max":
-            results[key] = Math.max(...numericValues);
-            break;
-          case "min":
-            results[key] = Math.min(...numericValues);
-            break;
-        }
-        // check if rawValues has any non-numeric values
-        if (rawValues[0] !== values[0]) {
-          results[key] = results[key] + " " + rawValues[0].split(" ")[1];
-        }
+      switch (method) {
+        case 'max':
+          result[prop] = `${Math.max(...values.map(this.parseValue))} C`;
+          break;
+        case 'min':
+          result[prop] = `${Math.min(...values.map(this.parseValue))} C`;
+          break;
+        case 'mode':
+          result[prop] = `${this.findMode(values)} C`;
+          break;
+        case 'avg':
+        default:
+          result[prop] = `${Math.round(this.calculateAverage(values))} C`;
+      }
+    }
 
-      });
-
-    return results;
+    return result;
   }
 }
 
-class ChatBotComponent extends LitElement {
+export class ChatBotComponent extends LitElement {
   showingTemperatureOptions = false;
   originalQuery = "";
   static styles = css`
@@ -537,6 +537,42 @@ img.icon-image {
 .send-icon {
   width: 30px;
   height: 30px;
+}
+
+/* Mic button styling */
+#mic-button {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+#mic-button:hover {
+  transform: scale(1.1);
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+#mic-button.listening {
+  background-color: rgba(220, 53, 69, 0.15);
+  animation: mic-pulse 0.8s infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220,53,69,0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(220,53,69,0); }
+}
+
+.mic-icon {
+  width: 24px;
+  height: 24px;
 }
 
 /* Question toggle section */
@@ -985,6 +1021,49 @@ flex-direction: row;
   transition: opacity 0.3s ease;
 }
 
+/* Speaker icon styling */
+.speaker-icon {
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 8px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease, transform 0.2s ease;
+  display: inline-block;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.speaker-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.speaker-icon.loading {
+  opacity: 1;
+  animation: tts-spin 0.9s linear infinite;
+  cursor: pointer;
+}
+
+@keyframes tts-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.speaker-icon.playing {
+  opacity: 1;
+  filter: brightness(0);
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
 @media screen and (max-width: 480px) {
   .edit-message-icon {
     left: -20px;
@@ -1122,7 +1201,288 @@ flex-direction: row;
     this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.currentChart = null;
+    this.showLanguageDropdown = false;
+    this.selectedLanguage = "English";
+    this.isListening = false;
+    this.recognition = null;
+    this.inAIQuestionMode = false;
+    this.currentAudio = null; // Track current audio playback
+    this.isBrowserTTSActive = false; // Track browser TTS state
+    this.isTTSLoading = false; // Track in-flight TTS API call
+    this.ttsAbortController = null; // AbortController for cancelling fetch
+    this.selectedGender = "female"; // TTS voice gender (male / female)
+    
+    // Number mapping for Hindi/Telugu
+    this.numberMap = {
+      // Hindi numbers
+      'एक': '1', 'ek': '1',
+      'दो': '2', 'do': '2',
+      'तीन': '3', 'teen': '3',
+      'चार': '4', 'chaar': '4', 'char': '4',
+      'पांच': '5', 'paanch': '5', 'panch': '5',
+      'छे': '6', 'chhah': '6', 'chah': '6',
+      'सात': '7', 'saat': '7',
+      'आठ': '8', 'aath': '8', 'ath': '8',
+      'नाउ': '9', 'nau': '9',
+      'दस': '10', 'das': '10',
+      // Telugu numbers
+      'ఒకటి': '1', 'okati': '1',
+      'రెండు': '2', 'rendu': '2',
+      'మూడు': '3', 'moodu': '3',
+      'నాలుగు': '4', 'naalugu': '4',
+      'ఐదు': '5', 'aidu': '5',
+      'ఆరు': '6', 'aaru': '6',
+      'ఏడు': '7', 'edu': '7',
+      'ఎనిమిది': '8', 'enimidi': '8',
+      'తొమ్మిది': '9', 'tommidi': '9',
+      'పది': '10', 'padi': '10'
+    };
   }
+
+  // Lifecycle: setup when component is connected
+  connectedCallback() {
+    super.connectedCallback();
+    
+    // Stop audio on page unload/refresh
+    this.handleBeforeUnload = () => {
+      this.stopAllAudio();
+    };
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
+    
+    // Also stop on visibility change (tab switch)
+    this.handleVisibilityChange = () => {
+      if (document.hidden) {
+        this.stopAllAudio();
+      }
+    };
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+  }
+
+  // Lifecycle: cleanup when component is removed
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.stopAllAudio();
+    
+    // Remove event listeners
+    if (this.handleBeforeUnload) {
+      window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    }
+    if (this.handleVisibilityChange) {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+  }
+
+  // Stop all audio playback
+  stopAllAudio() {
+    // Cancel any in-flight TTS API request
+    if (this.ttsAbortController) {
+      this.ttsAbortController.abort();
+      this.ttsAbortController = null;
+    }
+    this.isTTSLoading = false;
+
+    // Stop external TTS audio
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
+    
+    // Stop browser TTS
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+    this.isBrowserTTSActive = false;
+    
+    // Remove loading/playing classes and restore icon from all icons
+    const allIcons = this.shadowRoot?.querySelectorAll('.speaker-icon');
+    if (allIcons) {
+      allIcons.forEach(icon => {
+        icon.classList.remove('playing', 'loading');
+        icon.innerHTML = '🔊';
+      });
+    }
+    
+    console.log('🛑 All audio stopped');
+  }
+
+  // --- VOICE INPUT ---
+  startVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      return;
+    }
+    if (this.isListening) {
+      this.recognition && this.recognition.stop();
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    this.recognition = recognition;
+    recognition.lang = this.selectedLanguage === 'Telugu' ? 'te-IN'
+      : this.selectedLanguage === 'Hindi' ? 'hi-IN' : 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    this.isListening = true;
+    this.requestUpdate();
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0].transcript)
+        .join('')
+        .replace(/[.।]$/, '')
+        .trim();
+      
+      // Convert spoken numbers to digits
+      const convertedText = this.convertNumbersToDigits(transcript);
+      this.userInput = convertedText;
+      this.requestUpdate();
+    };
+    recognition.onend = () => {
+      this.isListening = false;
+      this.requestUpdate();
+    };
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      this.isListening = false;
+      this.requestUpdate();
+    };
+    recognition.start();
+  }
+
+  // --- TRANSLATION METHODS ---
+  containsTelugu(text) {
+    return /[\u0C00-\u0C7F]/.test(text || "");
+  }
+
+  containsHindi(text) {
+    return /[\u0900-\u097F]/.test(text || "");
+  }
+
+  // Convert spoken numbers in Hindi/Telugu to English digits
+  convertNumbersToDigits(text) {
+    if (!text) return text;
+    
+    let result = text;
+    const words = text.toLowerCase().split(/\s+/);
+    
+    // Replace each word if it matches a number
+    words.forEach(word => {
+      const cleanWord = word.trim();
+      if (this.numberMap[cleanWord]) {
+        // Use word boundary regex to replace whole words only
+        const regex = new RegExp(`\\b${cleanWord}\\b`, 'gi');
+        result = result.replace(regex, this.numberMap[cleanWord]);
+      }
+    });
+    
+    // Also check for Telugu/Hindi characters directly
+    Object.keys(this.numberMap).forEach(key => {
+      if (key.match(/[\u0900-\u097F\u0C00-\u0C7F]/)) {
+        const regex = new RegExp(key, 'g');
+        if (result.includes(key)) {
+          result = result.replace(regex, this.numberMap[key]);
+        }
+      }
+    });
+    
+    console.log('Number conversion:', text, '→', result);
+    return result;
+  }
+
+  async translateText(inputText) {
+    if (!inputText?.trim()) return inputText;
+    let apiUrl, accessToken;
+    if (this.selectedLanguage === "Telugu") {
+      apiUrl = ANUVAAD_TRANSLATION_API;
+      accessToken = ANUVAAD_ACCESS_TOKEN;
+    } else if (this.selectedLanguage === "Hindi") {
+      apiUrl = HINDI_TRANSLATION_API;
+      accessToken = HINDI_ACCESS_TOKEN;
+    } else {
+      return inputText;
+    }
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "access-token": accessToken,
+        },
+        body: JSON.stringify({ input_text: inputText }),
+      });
+      if (!response.ok) throw new Error(`Translation API response ${response.status}`);
+      const payload = await response.json();
+      return payload?.data?.output_text ?? inputText;
+    } catch (error) {
+      console.error("Translation error:", error);
+      return inputText;
+    }
+  }
+
+  async localizeBotText(text) {
+    if (this.selectedLanguage === "English" || !text?.trim() || text.includes("<")) return text;
+    const translated = await this.translateText(text);
+    if (this.selectedLanguage === "Telugu") {
+      return this.containsTelugu(translated) ? translated : text;
+    } else if (this.selectedLanguage === "Hindi") {
+      return this.containsHindi(translated) ? translated : text;
+    }
+    return text;
+  }
+
+  async localizeUserInputForBackend(inputText) {
+    if (this.selectedLanguage === "English") {
+      return { displayText: inputText, backendText: inputText };
+    }
+    const translated = await this.translateText(inputText);
+    let inputHasTargetLanguage, translatedHasTargetLanguage;
+    if (this.selectedLanguage === "Telugu") {
+      inputHasTargetLanguage = this.containsTelugu(inputText);
+      translatedHasTargetLanguage = this.containsTelugu(translated);
+    } else if (this.selectedLanguage === "Hindi") {
+      inputHasTargetLanguage = this.containsHindi(inputText);
+      translatedHasTargetLanguage = this.containsHindi(translated);
+    }
+    return {
+      displayText: !inputHasTargetLanguage && translatedHasTargetLanguage ? translated : inputText,
+      backendText: inputHasTargetLanguage && !translatedHasTargetLanguage ? translated : inputText,
+    };
+  }
+
+  async addLocalizedBotMessage(text) {
+    const localized = await this.localizeBotText(text);
+    this.addMessage(localized, "bot");
+  }
+
+  toggleLanguageDropdown(e) {
+    if (e) e.stopPropagation();
+    this.showLanguageDropdown = !this.showLanguageDropdown;
+    this.requestUpdate();
+  }
+
+  async selectLanguage(language) {
+    this.selectedLanguage = language;
+    this.showLanguageDropdown = false;
+    this.requestUpdate();
+    await this.relocalizeAllMessages();
+    // Force re-render to update all static UI text
+    this.requestUpdate();
+  }
+
+  async relocalizeAllMessages() {
+    // Re-translate all previous messages to the selected language
+    for (let i = 0; i < this.messages.length; i++) {
+      const msg = this.messages[i];
+      if (msg.sender === 'bot') {
+        this.messages[i].text = await this.localizeBotText(msg.text);
+      } else if (msg.sender === 'user') {
+        // Translate user message to selected language
+        this.messages[i].text = await this.translateText(msg.text);
+      }
+    }
+    this.requestUpdate();
+  }
+
   startEditMessage(index) {
     // Only allow editing user messages
     if (this.messages[index].sender === 'user') {
@@ -1140,122 +1500,292 @@ flex-direction: row;
   }
 
   async saveEditedMessage() {
-    if (this.editingMessageIndex !== -1 && this.editedMessage.trim()) {
-      // Store original message
-      const originalMessage = this.messages[this.editingMessageIndex].text;
+    if (this.editingMessageIndex === -1 || !this.editedMessage.trim()) return;
 
-      // Update the user message with edited content
-      this.messages[this.editingMessageIndex].text = this.editedMessage.trim();
+    // Update the user message with edited content
+    this.messages[this.editingMessageIndex].text = this.editedMessage.trim();
+    const responseIndex = this.editingMessageIndex + 1;
 
-      // Find the next message index
-      const responseIndex = this.editingMessageIndex + 1;
-
-      // Remove all messages after the edited message
-      // This will remove the previous response and any subsequent messages
-      if (responseIndex < this.messages.length) {
-        this.messages.splice(responseIndex);
-      }
-
-      // Add a new bot response message with loading indicator
-      this.messages.push({
-        sender: 'bot',
-        text: '●'
-      });
-
-      // Update the UI to show changes
-      this.populateMessages();
-
-      // Animated dots for loading
-      let dotCount = 0;
-      const loadingInterval = setInterval(() => {
-        dotCount = (dotCount % 3) + 1;
-        const dots = '●'.repeat(dotCount);
-
-        if (this.messages.length > responseIndex) {
-          this.messages[this.messages.length - 1].text = dots;
-          this.populateMessages();
-        }
-      }, 500);
-
-      try {
-        // Send the edited message to get a new response
-        const response = await this.sendMessageToBackend(this.editedMessage.trim());
-
-        // Clear the loading indicator
-        clearInterval(loadingInterval);
-
-        // Check if the new response should have visualization components
-        const temporalDataKeywords = [
-          'past', 'last', 'history', 'historical', 'trend', 'over time',
-          'yesterday', 'week', 'month', 'year', 'hour', 'day'
-        ];
-
-        const sensorParameterKeywords = [
-          'temperature', 'humidity', 'co2', 'carbon dioxide', 'co', 'carbon monoxide',
-          'pm2.5', 'particulate matter', 'pm10', 'gas', 'tvoc', 'voc', 'air quality',
-          'ph', 'turbidity', 'tds', 'conductivity', 'water flow', 'water level',
-          'voltage', 'current', 'power', 'energy', 'pressure', 'noise'
-        ];
-
-        const isTemporalDataQuery = temporalDataKeywords.some(keyword =>
-          this.editedMessage.toLowerCase().includes(keyword)
-        );
-
-        const isSensorParameterQuery = sensorParameterKeywords.some(keyword =>
-          this.editedMessage.toLowerCase().includes(keyword)
-        );
-
-        // Update the bot response with the new response
-        // If the query qualifies for visualization, add the icon
-        if (isTemporalDataQuery && isSensorParameterQuery) {
-          const iconId = `visualizeIcon_${Date.now()}`;
-          const queryToUse = this.editedMessage.trim(); // Store the actual query to use
-
-          this.messages[this.messages.length - 1].text = `${response}\n\n<div id="${iconId}" class="visualization-icon" data-query="${encodeURIComponent(queryToUse)}">
-                <img src="/static/images/bar1.png" alt="Visualize" />
-              </div>`;
-
-          // Add event listener for visualization icon after the message is rendered
-          setTimeout(() => {
-            const icon = this.shadowRoot.getElementById(iconId);
-            if (icon) {
-              // Remove any existing listeners by cloning and replacing the node
-              const newIcon = icon.cloneNode(true);
-              icon.parentNode.replaceChild(newIcon, icon);
-
-              // Add a fresh event listener with the correct query
-              newIcon.addEventListener("click", () => {
-                console.log("Visualization icon clicked for query:", queryToUse);
-                const encodedQuery = encodeURIComponent(queryToUse);
-                this.openVisualizationModal(encodedQuery);
-              });
-            }
-          }, 100);
-        } else {
-          // For other responses, just update the text
-          this.messages[this.messages.length - 1].text = response;
-        }
-      } catch (error) {
-        clearInterval(loadingInterval);
-
-        // Show error message if request fails
-        this.messages[this.messages.length - 1].text = "Sorry, I couldn't process your edited question. Please try again.";
-        console.error("Error processing edited message:", error);
-      }
-
-      // Reset editing state
-      this.editingMessageIndex = -1;
-      this.editedMessage = '';
-
-      // Update UI
-      this.populateMessages();
+    // Remove all messages after the edited message
+    if (responseIndex < this.messages.length) {
+      this.messages.splice(responseIndex);
     }
+
+    // Add a new bot response message with loading indicator
+    this.messages.push({ sender: 'bot', text: '●' });
+    this.populateMessages();
+
+    // Animated dots for loading
+    let dotCount = 0;
+    const loadingInterval = setInterval(() => {
+      dotCount = (dotCount % 3) + 1;
+      const dots = '●'.repeat(dotCount);
+      if (this.messages.length > responseIndex) {
+        this.messages[this.messages.length - 1].text = dots;
+        this.populateMessages();
+      }
+    }, 500);
+
+    try {
+      const { backendText: editedBackendText } = await this.localizeUserInputForBackend(this.editedMessage.trim());
+      const response = await this.sendMessageToBackend(editedBackendText);
+      clearInterval(loadingInterval);
+
+      const lowerMsg = this.editedMessage.toLowerCase();
+      const isTemporalDataQuery = [
+        'past', 'last', 'history', 'historical', 'trend', 'over time',
+        'yesterday', 'week', 'month', 'year', 'hour', 'day'
+      ].some(keyword => lowerMsg.includes(keyword));
+      const isSensorParameterQuery = [
+        'temperature', 'humidity', 'co2', 'carbon dioxide', 'co', 'carbon monoxide',
+        'pm2.5', 'particulate matter', 'pm10', 'gas', 'tvoc', 'voc', 'air quality',
+        'ph', 'turbidity', 'tds', 'conductivity', 'water flow', 'water level',
+        'voltage', 'current', 'power', 'energy', 'pressure', 'noise'
+      ].some(keyword => lowerMsg.includes(keyword));
+
+      if (isTemporalDataQuery && isSensorParameterQuery) {
+        this._addVisualizationResponse(response, this.editedMessage.trim());
+      } else {
+        this.messages[this.messages.length - 1].text = response;
+      }
+    } catch (error) {
+      clearInterval(loadingInterval);
+      this.messages[this.messages.length - 1].text = "Sorry, I couldn't process your edited question. Please try again.";
+      console.error("Error processing edited message:", error);
+    }
+
+    this.editingMessageIndex = -1;
+    this.editedMessage = '';
+    this.populateMessages();
+  }
+
+  // Helper to add visualization icon and event
+  _addVisualizationResponse(response, queryToUse) {
+    const iconId = `visualizeIcon_${Date.now()}`;
+    this.messages[this.messages.length - 1].text = `${response}\n\n<div id="${iconId}" class="visualization-icon" data-query="${encodeURIComponent(queryToUse)}">
+        <img src="/static/images/bar1.png" alt="Visualize" />
+      </div>`;
+    setTimeout(() => {
+      const icon = this.shadowRoot.getElementById(iconId);
+      if (icon) {
+        const newIcon = icon.cloneNode(true);
+        icon.parentNode.replaceChild(newIcon, icon);
+        newIcon.addEventListener("click", () => {
+          console.log("Visualization icon clicked for query:", queryToUse);
+          const encodedQuery = encodeURIComponent(queryToUse);
+          this.openVisualizationModal(encodedQuery);
+        });
+      }
+    }, 100);
   }
 
   cancelEditMessage() {
     this.editingMessageIndex = -1;
     this.editedMessage = '';
     this.requestUpdate();
+  }
+
+  // Helper function to convert English numerals to Hindi numerals
+  convertToHindiNumerals(text) {
+    const englishToHindi = {
+      '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
+      '5': '५', '6': '६', '7': '७', '8': '८', '9': '९'
+    };
+    return text.replace(/[0-9]/g, digit => englishToHindi[digit]);
+  }
+
+  // Helper function to convert English numerals to Telugu numerals
+  convertToTeluguNumerals(text) {
+    const englishToTelugu = {
+      '0': '౦', '1': '౧', '2': '౨', '3': '౩', '4': '౪',
+      '5': '౫', '6': '౬', '7': '౭', '8': '౮', '9': '౯'
+    };
+    return text.replace(/[0-9]/g, digit => englishToTelugu[digit]);
+  }
+
+  // Text-to-speech functionality using external TTS APIs
+  async speakText(text, iconElement) {
+    // Stop any ongoing/loading audio if clicked again
+    if (this.isTTSLoading || this.currentAudio || this.isBrowserTTSActive) {
+      console.log('🛑 Stopping current audio...');
+      this.stopAllAudio();
+      return;
+    }
+
+    // Clean the text - remove HTML tags and special characters
+    let cleanText = text
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&') // Replace HTML entities
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/●/g, '') // Remove loading dots
+      .replace(/🔊/g, '') // Remove speaker emoji
+      .trim();
+
+    if (!cleanText) {
+      console.warn('No text to speak');
+      return;
+    }
+
+    console.log('🔊 TTS Request:', cleanText, 'Language:', this.selectedLanguage);
+
+    // Get TTS API details based on selected language
+    let apiUrl, accessToken;
+    if (this.selectedLanguage === 'Telugu') {
+      apiUrl = TELUGU_TTS_API;
+      accessToken = TELUGU_TTS_TOKEN;
+      // Convert English numerals to Telugu numerals for proper pronunciation
+      cleanText = this.convertToTeluguNumerals(cleanText);
+    } else if (this.selectedLanguage === 'Hindi') {
+      apiUrl = HINDI_TTS_API;
+      accessToken = HINDI_TTS_TOKEN;
+      // Convert English numerals to Hindi numerals for proper pronunciation
+      cleanText = this.convertToHindiNumerals(cleanText);
+    } else {
+      apiUrl = ENGLISH_TTS_API;
+      accessToken = ENGLISH_TTS_TOKEN;
+    }
+
+    // Show loading state on icon
+    this.isTTSLoading = true;
+    this.ttsAbortController = new AbortController();
+    if (iconElement) {
+      iconElement.innerHTML = '⏳';
+      iconElement.classList.add('loading');
+    }
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access-token': accessToken
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          gender: this.selectedGender
+        }),
+        signal: this.ttsAbortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('TTS API Response:', data);
+
+      // Switch from loading → playing
+      this.isTTSLoading = false;
+      this.ttsAbortController = null;
+      if (iconElement) {
+        iconElement.classList.remove('loading');
+        iconElement.innerHTML = '🔊';
+        iconElement.classList.add('playing');
+      }
+
+      if (data.status === 'success' && data.data?.s3_url) {
+        // Play audio from S3 URL
+        const audio = new Audio(data.data.s3_url);
+        this.currentAudio = audio;
+
+        audio.onended = () => {
+          if (iconElement) {
+            iconElement.classList.remove('playing');
+            iconElement.innerHTML = '🔊';
+          }
+          this.currentAudio = null;
+          console.log('✓ Audio playback ended');
+        };
+
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          if (iconElement) {
+            iconElement.classList.remove('playing', 'loading');
+            iconElement.innerHTML = '🔊';
+          }
+          this.currentAudio = null;
+        };
+
+        // Listen for pause event (manual stop)
+        audio.onpause = () => {
+          if (iconElement) {
+            iconElement.classList.remove('playing');
+            iconElement.innerHTML = '🔊';
+          }
+          console.log('🕇 Audio paused');
+        };
+
+        await audio.play();
+        console.log('✓ Audio playing successfully');
+      } else {
+        throw new Error('No audio data received from TTS API');
+      }
+    } catch (error) {
+      this.isTTSLoading = false;
+      this.ttsAbortController = null;
+      if (iconElement) {
+        iconElement.classList.remove('playing', 'loading');
+        iconElement.innerHTML = '🔊';
+      }
+      this.currentAudio = null;
+
+      if (error.name === 'AbortError') {
+        console.log('🛑 TTS request cancelled');
+        return;
+      }
+
+      console.error('TTS Error:', error);
+      // Fallback to browser TTS
+      console.log('Falling back to browser TTS...');
+      this.fallbackToBrowserTTS(cleanText, iconElement);
+    }
+  }
+
+  // Fallback to browser's speech synthesis if external TTS fails
+  fallbackToBrowserTTS(text, iconElement) {
+    // Mark browser TTS as active
+    this.isBrowserTTSActive = true;
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    if (this.selectedLanguage === 'Telugu') {
+      utterance.lang = 'te-IN';
+    } else if (this.selectedLanguage === 'Hindi') {
+      utterance.lang = 'hi-IN';
+    } else {
+      utterance.lang = 'en-US';
+    }
+
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    if (iconElement) {
+      iconElement.classList.add('playing');
+    }
+
+    utterance.onend = () => {
+      if (iconElement) {
+        iconElement.classList.remove('playing');
+      }
+      this.isBrowserTTSActive = false;
+      console.log('✓ Browser TTS ended');
+    };
+
+    utterance.onerror = (event) => {
+      console.error('Fallback TTS error:', event);
+      if (iconElement) {
+        iconElement.classList.remove('playing');
+      }
+      this.isBrowserTTSActive = false;
+    };
+
+    window.speechSynthesis.speak(utterance);
+    console.log('🔊 Browser TTS started');
   }
 
   scrollToBottom() {
@@ -1275,7 +1805,6 @@ flex-direction: row;
     this.popupActive = !this.popupActive;
     let popup = this.shadowRoot.getElementById("chat-pop");
     if (this.popupActive) {
-      // this.currentMessageIndex = 0;
       this.currentOptions = conversationTree.options;
       this.userInput = "";
       popup.classList.add("active");
@@ -1323,7 +1852,6 @@ flex-direction: row;
     accumulator = false,
     nodeIdentifier = false
   ) {
-    // fetch data from url
     const latest_data_url = new URL(
       "https://smartcitylivinglab.iiit.ac.in/verticals/all/latest"
     );
@@ -1336,11 +1864,9 @@ flex-direction: row;
 
     this.resetInputAndPopulateMessages();
 
-    // Fetch data from the API
-    let response = await fetch(latest_data_url, options);
-
-    let data = await response.json();
-
+    // Fetch and flatten data
+    const response = await fetch(latest_data_url, options);
+    const data = await response.json();
     const data_dict = Object.values(data)
       .flat()
       .reduce((acc, element) => {
@@ -1348,38 +1874,35 @@ flex-direction: row;
         return acc;
       }, {});
 
-    let filteredNodes = Object.values(data_dict);
-    // Check if vertical
-    if (verticalIdentifier) {
-      // get all with node_id starting with verticalIdentifier or if first 4 letters have verticalIdentifier
-      filteredNodes = Object.values(data_dict).filter(
-        (node) =>
-          node.node_id.startsWith(verticalIdentifier) ||
-          node.node_id.slice(0, 4).includes(verticalIdentifier)
-      );
-    }
-    // Check if building
-    if (buildingIdentifier) {
-      // getall nodes in filtered nodes which have buildingIdentifier in their node_id
-      filteredNodes = filteredNodes.filter((node) =>
-        node.node_id.includes(buildingIdentifier)
-      );
-    }
-    // Check if floor
-    if (floorIdentifier) {
-      // getall nodes in filtered nodes which have floorIdentifier in their node_id
-      filteredNodes = filteredNodes.filter((node) =>
-        node.node_id.includes(floorIdentifier)
-      );
-    }
+    // Helper: filter nodes by identifier
+    const filterNodes = (nodes, identifier, fn) =>
+      identifier ? nodes.filter(fn) : nodes;
 
-    // Check nodeIdentifier
+    let filteredNodes = Object.values(data_dict);
+
+    filteredNodes = filterNodes(
+      filteredNodes,
+      verticalIdentifier,
+      (node) =>
+        node.node_id.startsWith(verticalIdentifier) ||
+        node.node_id.slice(0, 4).includes(verticalIdentifier)
+    );
+    filteredNodes = filterNodes(
+      filteredNodes,
+      buildingIdentifier,
+      (node) => node.node_id.includes(buildingIdentifier)
+    );
+    filteredNodes = filterNodes(
+      filteredNodes,
+      floorIdentifier,
+      (node) => node.node_id.includes(floorIdentifier)
+    );
+
+    // Node identifier logic
     if (nodeIdentifier) {
-      // get node with node_id equal to nodeIdentifier
       filteredNodes = filteredNodes.filter(
         (node) => node.node_id === nodeIdentifier
       );
-      // If no node found, try to find the closest match using Levenshtein distance
       if (filteredNodes.length === 0) {
         let closestMatch = "";
         let minDistance = Number.MAX_SAFE_INTEGER;
@@ -1393,139 +1916,88 @@ flex-direction: row;
             closestMatch = node.node_id;
           }
         }
-        console.log(
-          "Closest match: " + closestMatch + " with distance: " + minDistance
-        );
         this.addMessage(
           `No data found for the node ${nodeIdentifier}. One of the closest match is ${closestMatch}`,
           "bot"
         );
-
-        // Show the data for the closest match
         filteredNodes = Object.values(data_dict).filter(
           (node) => node.node_id === closestMatch
         );
       }
     }
 
-    // if 0 nodes found, return No data found
+    // No data found
     if (filteredNodes.length === 0) {
-      let message = "No data found for the identifiers: ";
-      let identifiers = [];
-
-      if (buildingIdentifier) {
-        identifiers.push("Building - " + buildingIdentifier);
-      }
-
-      if (verticalIdentifier) {
-        identifiers.push("Vertical - " + verticalIdentifier);
-      }
-
-      if (floorIdentifier) {
-        identifiers.push("Floor - " + floorIdentifier);
-      }
-
-      if (nodeIdentifier) {
-        identifiers.push("Node - " + nodeIdentifier);
-      }
-
-      message += identifiers.join(", ");
-
+      const identifiers = [];
+      if (buildingIdentifier) identifiers.push("Building - " + buildingIdentifier);
+      if (verticalIdentifier) identifiers.push("Vertical - " + verticalIdentifier);
+      if (floorIdentifier) identifiers.push("Floor - " + floorIdentifier);
+      if (nodeIdentifier) identifiers.push("Node - " + nodeIdentifier);
+      const message = "No data found for the identifiers: " + identifiers.join(", ");
       this.addMessage(message, "bot");
       return false;
     }
 
+    // Aggregate if needed
     if (accumulator) {
-      // Log all the data
       const processor = new DataProcessor(filteredNodes);
       const aggregatedData = processor.aggregateData(accumulator);
       filteredNodes = [aggregatedData];
-      // Except for latitude, longitude, node_id, name, type, xcor and ycor Calculate for all the other keys
-      // Some are numbers and some are strings like "good", "bad", "average" and others are strings like "43 something"
-      // For numbers, calculate the average, for strings like "good", "bad", "average" calculate the most common value and for strings like "43 something" split the string and calculate average of the numbers and then reattach the string
     }
 
-    // if more than 1 node is found return the first node
-    console.log(filteredNodes);
-    if (filteredNodes.length >= 1) {
-      let responseMessage = "";
-      // if accumulator is true, then the data is aggregated
-      if (accumulator) {
-        responseMessage += "Aggregated data with \n";
-        responseMessage += "Accumulator: " + accumulator + "\n";
-      } else {
-        responseMessage += "Data for the identifiers: \n";
-      }
+    // Compose response message
+    let responseMessage = "";
+    if (accumulator) {
+      responseMessage += "Aggregated data with \n";
+      responseMessage += "Accumulator: " + accumulator + "\n";
+    } else {
+      responseMessage += "Data for the identifiers: \n";
+    }
+    const node = filteredNodes[0];
+    responseMessage += `${node["node_id"]}:\n`;
+    for (const [k, value] of Object.entries(node)) {
+      responseMessage += k + ": " + value + "\n";
+    }
+    this.addMessage(responseMessage, "bot");
 
-      // Get the first node
-      let node = filteredNodes[0];
-
-      // Initialize the response message
-      responseMessage += `${node["node_id"]}:\n`;
-
-      // Iterate over the properties of the node
-      for (const [key, value] of Object.entries(node)) {
-        responseMessage += key + ": " + value + "\n";
-      }
-
-      this.addMessage(responseMessage, "bot");
-
-      if (filteredNodes.length > 1) {
-        // Create a markdown table for better readability
-        // Add title and identifier names before the table
-        let mkdwnTable = "# Data For the Identifiers:\n";
-        if (buildingIdentifier) {
-          mkdwnTable += "Building: " + buildingIdentifier + "\n";
-        }
-        if (verticalIdentifier) {
-          mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
-        }
-        if (floorIdentifier) {
-          mkdwnTable += "Floor: " + floorIdentifier + "\n";
-        }
-        mkdwnTable += "\n";
-
-        mkdwnTable += "|";
-        for (const key of Object.keys(filteredNodes[0])) {
-          mkdwnTable += key + "|";
-        }
-        mkdwnTable += "\n|";
-        for (const key of Object.keys(filteredNodes[0])) {
-          mkdwnTable += "-|";
-        }
-        mkdwnTable += "\n";
-        for (const node of filteredNodes) {
-          for (const value of Object.values(node)) {
-            mkdwnTable += value + "|";
-          }
-          mkdwnTable += "\n";
-        }
-
-        // Post to stagbin
-        const response = await fetch("https://api.stagb.in/dev/content", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            data: mkdwnTable,
-          }),
+    // Markdown table for multiple nodes
+    if (filteredNodes.length > 1) {
+      let mkdwnTable = "# Data For the Identifiers:\n";
+      if (buildingIdentifier) mkdwnTable += "Building: " + buildingIdentifier + "\n";
+      if (verticalIdentifier) mkdwnTable += "Vertical: " + verticalIdentifier + "\n";
+      if (floorIdentifier) mkdwnTable += "Floor: " + floorIdentifier + "\n";
+      mkdwnTable += "\n|";
+      Object.keys(filteredNodes[0]).forEach((k) => {
+        mkdwnTable += k + "|";
+      });
+      mkdwnTable += "\n|";
+      Object.keys(filteredNodes[0]).forEach(() => {
+        mkdwnTable += "-|";
+      });
+      mkdwnTable += "\n";
+      filteredNodes.forEach((n) => {
+        Object.values(n).forEach((value) => {
+          mkdwnTable += value + "|";
         });
-        console.log(response);
-        const responseJson = await response.json();
-        console.log(responseJson);
+        mkdwnTable += "\n";
+      });
 
-        // Add table link to the chat
-        this.addMessage(
-          `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
-          "bot"
-        );
-      }
-      return false;
+      const tableResponse = await fetch("https://api.stagb.in/dev/content", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          data: mkdwnTable,
+        }),
+      });
+      const responseJson = await tableResponse.json();
+      this.addMessage(
+        `Data table for all the identifiers can be found <a href="https://stagb.in/${responseJson.id}.md" target="_blank">here</a>`,
+        "bot"
+      );
     }
-
-    // Fetch data based on identifiers and return true or false
-    return true;
+    return false;
   }
 
   handleKeyDown(e) {
@@ -1537,240 +2009,95 @@ flex-direction: row;
 
   async sendMessage() {
     const userInputTrimmed = this.userInput.trim();
-    if (!userInputTrimmed) {
-      return;
-    }
-    let loadingInterval;
+    if (!userInputTrimmed) return;
+    // Translation: localize user input for backend and display
+    const { displayText, backendText } = await this.localizeUserInputForBackend(userInputTrimmed);
 
-    if (this.stringInput) {
-      this.stringInput = false;
-      this.addMessage(userInputTrimmed, "user");
+    // Helper: handle loading dots
+    const startLoading = () => {
+      let dotCount = 0;
+      return setInterval(() => {
+        dotCount = (dotCount % 3) + 1;
+        const dots = '●'.repeat(dotCount);
+        if (
+          this.messages[this.messages.length - 1].sender === 'bot' &&
+          this.messages[this.messages.length - 1].text.startsWith('●')
+        ) {
+          this.messages.pop();
+        }
+        this.addMessage(dots, "bot");
+      }, 500);
+    };
 
-      const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
-      if (lastBotMessage.includes("Please enter your question:")) {
-        let dotCount = 0;
-        loadingInterval = setInterval(() => {
-          dotCount = (dotCount % 3) + 1;
-          const dots = '●'.repeat(dotCount);
+    // Helper: handle bot options after response
+    const setBotOptions = (optionsNode) => {
+      this.currentOptions = conversationTree.nodes[optionsNode].options;
+      this.recommendedQuestions = [];
+      this.conversationOptions = this.currentOptions;
+      this.requestUpdate();
+    };
 
-          if (this.messages[this.messages.length - 1].sender === 'bot' &&
-            this.messages[this.messages.length - 1].text.startsWith('●')) {
-            this.messages.pop();
-          }
-
-          this.addMessage(dots, "bot");
-        }, 500);
-
-        try {
-          const temporalDataKeywords = [
-            'past', 'last', 'history', 'historical', 'trend', 'over time',
-            'yesterday', 'week', 'month', 'year', 'hour', 'day'
-          ];
-
-          const tempHumidityKeywords = ['temperature', 'humidity'];
-          const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
-          const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
-
-          const response = await this.sendMessageToBackend(userInputTrimmed);
-
-          let responseData;
-          try {
-            responseData = typeof response === 'string' ? JSON.parse(response) : response;
-          } catch (parseError) {
-            responseData = {
-              response: response || "I received a response, but it couldn't be parsed.",
-              is_temporal: false
-            };
-          }
-
-          // ADDED: Explicit location extraction from input
-          const extractedLocation = this.extractLocation(userInputTrimmed);
-          console.log('Extracted Location:', extractedLocation);
-
-          if (loadingInterval) {
-            clearInterval(loadingInterval);
-          }
-
-          if (this.messages[this.messages.length - 1].text.startsWith('●')) {
-            this.messages.pop();
-          }
-
-          // MODIFIED: Use extracted location for validation
-          const isLocationValid =
-            extractedLocation &&
-            ['Kohli Block', 'Vindhya'].some(
-              location => extractedLocation.toLowerCase() === location.toLowerCase()
-            );
-
-
-          if (isTemporalDataQuery && isTempHumidityQuery) {
-            const iconId = `visualizeIcon_${Date.now()}`;
-
-            this.addMessage(`${responseData.response}\n\n<div id="${iconId}" class="visualization-icon">
-                    <img src="/static/images/bar1.png" alt="Visualize" />
-                  </div>`, "bot");
-
-            setTimeout(() => {
-              const icon = this.shadowRoot.getElementById(iconId);
-              if (icon) {
-                icon.addEventListener("click", () => {
-                  console.log("Visualization icon clicked!");
-                  const encodedQuery = encodeURIComponent(userInputTrimmed);
-                  this.openVisualizationModal(encodedQuery);
-                });
-              }
-            }, 100);
-
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
-            this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-            this.recommendedQuestions = [];
-            this.conversationOptions = this.currentOptions;
-            this.requestUpdate();
-          }
-
-          else if (isTempHumidityQuery && isLocationValid) {
-            const indoorButtonId = `indoorButton_${Date.now()}`;
-            const outdoorButtonId = `outdoorButton_${Date.now()}`;
-
-            this.addMessage(`${responseData.response}\n\n<div class="location-buttons">
-                  <button id="${indoorButtonId}" class="location-btn">Indoor</button>
-                  <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
-                </div>`, "bot");
-
-            setTimeout(() => {
-              const indoorButton = this.shadowRoot.getElementById(indoorButtonId);
-              const outdoorButton = this.shadowRoot.getElementById(outdoorButtonId);
-
-              if (indoorButton) {
-                indoorButton.addEventListener('click', () => this.handleLocationButton('Indoor'));
-              }
-              if (outdoorButton) {
-                outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
-              }
-            }, 100);
-          } else {
-            this.addMessage(responseData.response, "bot");
-
-            this.addMessage(
-              "Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat",
-              "bot"
-            );
-
-            this.currentOptions = conversationTree.nodes.QuestionResponseOptionsNode.options;
-            this.recommendedQuestions = [];
-            this.conversationOptions = this.currentOptions;
-            this.requestUpdate();
-          }
-        } catch (error) {
-          if (loadingInterval) {
-            clearInterval(loadingInterval);
-          }
-
-          console.error("Error processing question:", error);
-          this.addMessage("Sorry, I couldn't process your question. Please try again.", "bot");
+    // Helper: handle continue/exit selection
+    const handleContinueExit = async (input) => {
+      if (input === "1") {
+        this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
+        this.currentOptions = [];
+        this.stringInput = true;
+        this.inAIQuestionMode = true;
+        this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
+        this.requestUpdate();
+      } else if (input === "3") {
+        this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
+        setTimeout(() => {
           this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
           this.currentOptions = conversationTree.nodes.MainMenu.options;
           this.recommendedQuestions = [];
           this.conversationOptions = [];
           this.requestUpdate();
-        }
-      } else if (lastBotMessage.includes("Would you like to:")) {
-        // Handle continue/exit selection
-        if (userInputTrimmed === "1") {
-          this.addMessage(conversationTree.nodes.AskQuestionNode.message, "bot");
-          this.currentOptions = [];
-          this.stringInput = true;
-          this.recommendedQuestions = conversationTree.nodes.AskQuestionNode.recommendedQuestions;
-          this.requestUpdate();
-        } else if (userInputTrimmed === "3") {
-          this.addMessage(conversationTree.nodes.ExitChatNode.message, "bot");
-          // Reset to main menu after exit
-          setTimeout(() => {
-            this.addMessage(conversationTree.nodes.MainMenu.message, "bot");
-            this.currentOptions = conversationTree.nodes.MainMenu.options;
-            this.recommendedQuestions = [];
-            this.conversationOptions = [];
-            this.requestUpdate();
-          }, 1000);
-        }
-      } else {
-        // Other existing logic remains the same
-        let continueConversation = await this.fetchDataAndAskContinue(
-          false,
-          false,
-          false,
-          false,
-          userInputTrimmed
-        );
-        if (!continueConversation) {
-          this.addMessage(
-            "Would you like to:\n1. Ask Another Question\n2. Exit Chat",
-            "bot"
-          );
-          this.currentOptions = [
-            { text: "1", next: "AskQuestionNode" },
-            { text: "2", next: "ExitChatNode" }
-          ];
-          this.recommendedQuestions = [];
-          this.conversationOptions = this.currentOptions;
-          this.requestUpdate();
-        }
-        this.buildingIdentifier = "";
-        this.verticalIdentifier = "";
-        this.floorIdentifier = "";
+        }, 1000);
       }
+    };
 
-      this.resetInputAndPopulateMessages();
-      return;
-    }
-    // Rest of the existing sendMessage function remains unchanged
-    const selectedOption = this.currentOptions.find(
-      (option) => option.text === userInputTrimmed
-    );
-    let nextNodeKey = "";
-    let responseMessage = "";
-    let error = false;
+    // Helper: handle fetchDataAndAskContinue fallback
+    const handleFetchDataFallback = async (input) => {
+      let continueConversation = await this.fetchDataAndAskContinue(
+        false, false, false, false, input
+      );
+      if (!continueConversation) {
+        this.addMessage(
+          "Would you like to:\n1. Ask Another Question\n2. Exit Chat",
+          "bot"
+        );
+        this.currentOptions = [
+          { text: "1", next: "AskQuestionNode" },
+          { text: "2", next: "ExitChatNode" }
+        ];
+        this.recommendedQuestions = [];
+        this.conversationOptions = this.currentOptions;
+        this.requestUpdate();
+      }
+      this.buildingIdentifier = "";
+      this.verticalIdentifier = "";
+      this.floorIdentifier = "";
+    };
 
-    this.addMessage(userInputTrimmed, "user");
+    // Helper: handle option selection
+    const handleOptionSelection = async (selectedOption) => {
+      let responseMessage = "";
+      let nextNodeKey = selectedOption.next;
+      let lastBotMessage = this.messages[this.messages.length - 2]?.text || "";
 
-    if (selectedOption) {
-      nextNodeKey = selectedOption.next;
-
-      let lastBotMessage = this.messages[this.messages.length - 2].text;
-      console.log("Last bot message: " + lastBotMessage);
-      console.log(selectedOption);
       if (selectedOption.identifier) {
-        console.log("Selected option identifier: " + selectedOption.identifier);
         if (lastBotMessage.includes("Which building data do you need?")) {
           this.buildingIdentifier = selectedOption.identifier;
-        } else if (
-          lastBotMessage.includes("Please select a floor by entering")
-        ) {
+        } else if (lastBotMessage.includes("Please select a floor by entering")) {
           this.floorIdentifier = selectedOption.identifier;
         } else if (lastBotMessage.includes("Please select a vertical")) {
           this.verticalIdentifier = selectedOption.identifier;
         }
       }
-
-      if (selectedOption.accumulator) {
-        this.acc = selectedOption.accumulator;
-      }
-
-      if (selectedOption.textInput) {
-        this.stringInput = true;
-      }
-
-      console.log(
-        "Identifiers: Building - " +
-        this.buildingIdentifier +
-        ", Vertical - " +
-        this.verticalIdentifier +
-        ", Floor - " +
-        this.floorIdentifier
-      );
+      if (selectedOption.accumulator) this.acc = selectedOption.accumulator;
+      if (selectedOption.textInput) this.stringInput = true;
 
       if (selectedOption.terminate) {
         let continueConversation = await this.fetchDataAndAskContinue(
@@ -1791,7 +2118,6 @@ flex-direction: row;
             { text: "4", next: "ConversationalModeOptions" }
           ];
         }
-
         this.buildingIdentifier = "";
         this.verticalIdentifier = "";
         this.floorIdentifier = "";
@@ -1801,37 +2127,139 @@ flex-direction: row;
       if (nextNode) {
         responseMessage = nextNode.message;
         this.currentOptions = nextNode.options || [];
-
-        // New logic for handling recommended questions
         if (nextNodeKey === "AskQuestionNode") {
           this.stringInput = true;
+          this.inAIQuestionMode = true;
           this.recommendedQuestions = nextNode.recommendedQuestions || [];
-          this.conversationOptions = this.currentOptions; // Preserve conversation options
+          this.conversationOptions = this.currentOptions;
           this.requestUpdate();
         } else {
           this.recommendedQuestions = [];
-          this.conversationOptions = this.currentOptions; // Preserve conversation options
+          this.conversationOptions = this.currentOptions;
         }
-
         this.currentMessageIndex++;
         this.lastCorrectMessageIndex = this.currentMessageIndex;
       } else {
         responseMessage = "Error: Invalid next node";
-        error = true;
       }
+      if (typeof responseMessage === 'string' && responseMessage.trim() && this.selectedLanguage !== 'English') {
+        responseMessage = await this.localizeBotText(responseMessage);
+      }
+      this.addMessage(responseMessage, "bot");
+    };
+
+    // Main logic
+    if (this.stringInput) {
+      this.stringInput = false;
+      this.addMessage(displayText, "user");
+      const lastBotMessage = this.messages.length >= 2 ? this.messages[this.messages.length - 2].text : "";
+
+      if (lastBotMessage.includes("Please enter your question:") || this.inAIQuestionMode) {
+        this.inAIQuestionMode = false;
+        let loadingInterval = startLoading();
+        try {
+          const temporalDataKeywords = [
+            'past', 'last', 'history', 'historical', 'trend', 'over time',
+            'yesterday', 'week', 'month', 'year', 'hour', 'day'
+          ];
+          const tempHumidityKeywords = ['temperature', 'humidity'];
+          const isTemporalDataQuery = temporalDataKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
+          const isTempHumidityQuery = tempHumidityKeywords.some(keyword => userInputTrimmed.toLowerCase().includes(keyword));
+
+          const response = await this.sendMessageToBackend(backendText);
+          let responseData;
+          try {
+            responseData = typeof response === 'string' ? JSON.parse(response) : response;
+          } catch (parseError) {
+            responseData = {
+              response: response || "I received a response, but it couldn't be parsed.",
+              is_temporal: false
+            };
+          }
+          const extractedLocation = this.extractLocation(userInputTrimmed);
+
+          if (loadingInterval) clearInterval(loadingInterval);
+          if (this.messages[this.messages.length - 1].text.startsWith('●')) this.messages.pop();
+
+          const isLocationValid =
+            extractedLocation &&
+            ['Kohli Block', 'Vindhya'].some(
+              location => extractedLocation.toLowerCase() === location.toLowerCase()
+            );
+
+          if (isTemporalDataQuery && isTempHumidityQuery) {
+            const iconId = `visualizeIcon_${Date.now()}`;
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(`${localizedResponse}\n\n<div id="${iconId}" class="visualization-icon">
+                    <img src="/static/images/bar1.png" alt="Visualize" />
+                  </div>`, "bot");
+            setTimeout(() => {
+              const icon = this.shadowRoot.getElementById(iconId);
+              if (icon) {
+                icon.addEventListener("click", () => {
+                  const encodedQuery = encodeURIComponent(userInputTrimmed);
+                  this.openVisualizationModal(encodedQuery);
+                });
+              }
+            }, 100);
+            const localizedFollowup = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
+            this.addMessage(localizedFollowup, "bot");
+            setBotOptions("QuestionResponseOptionsNode");
+          } else if (isTempHumidityQuery && isLocationValid) {
+            const indoorButtonId = `indoorButton_${Date.now()}`;
+            const outdoorButtonId = `outdoorButton_${Date.now()}`;
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(`${localizedResponse}\n\n<div class="location-buttons">
+                  <button id="${indoorButtonId}" class="location-btn">Indoor</button>
+                  <button id="${outdoorButtonId}" class="location-btn">Outdoor</button>
+                </div>`, "bot");
+            setTimeout(() => {
+              const indoorButton = this.shadowRoot.getElementById(indoorButtonId);
+              const outdoorButton = this.shadowRoot.getElementById(outdoorButtonId);
+              if (indoorButton) indoorButton.addEventListener('click', () => this.handleLocationButton('Indoor'));
+              if (outdoorButton) outdoorButton.addEventListener('click', () => this.handleLocationButton('Outdoor'));
+            }, 100);
+          } else {
+            const localizedResponse = await this.localizeBotText(responseData.response);
+            this.addMessage(localizedResponse, "bot");
+            const localizedFollowup = await this.localizeBotText("Would you like to:\n1. Ask Another Question\n2. Back to the menu\n3. Exit Chat");
+            this.addMessage(localizedFollowup, "bot");
+            setBotOptions("QuestionResponseOptionsNode");
+          }
+        } catch (error) {
+          if (loadingInterval) clearInterval(loadingInterval);
+          const localizedError = await this.localizeBotText("Sorry, I couldn't process your question. Please try again.");
+          this.addMessage(localizedError, "bot");
+          const localizedMainMenu = await this.localizeBotText(conversationTree.nodes.MainMenu.message);
+          this.addMessage(localizedMainMenu, "bot");
+          this.currentOptions = conversationTree.nodes.MainMenu.options;
+          this.recommendedQuestions = [];
+          this.conversationOptions = [];
+          this.requestUpdate();
+        }
+      } else if (lastBotMessage.includes("Would you like to:")) {
+        await handleContinueExit(userInputTrimmed);
+      } else {
+        await handleFetchDataFallback(userInputTrimmed);
+      }
+      this.resetInputAndPopulateMessages();
+      return;
+    }
+
+    // Handle option selection (non-stringInput)
+    const selectedOption = this.currentOptions.find(
+      (option) => option.text === userInputTrimmed
+    );
+    this.addMessage(displayText, "user");
+    if (selectedOption) {
+      await handleOptionSelection(selectedOption);
     } else {
-      responseMessage = "Error: Invalid option selected";
-      error = true;
-    }
-
-    this.addMessage(responseMessage, "bot");
-
-    if (error) {
+      const localizedError = await this.localizeBotText("Error: Invalid option selected");
+      this.addMessage(localizedError, "bot");
       const lastCorrectMessage = this.messages[this.lastCorrectMessageIndex];
-      this.addMessage(lastCorrectMessage.text, "bot");
-      error = false;
+      const localizedLastCorrect = await this.localizeBotText(lastCorrectMessage.text);
+      this.addMessage(localizedLastCorrect, "bot");
     }
-
     this.resetInputAndPopulateMessages();
   }
 
@@ -1914,8 +2342,7 @@ flex-direction: row;
 
 
   async openVisualizationModal(query) {
-
-
+    // Remove any existing modal and chart
     const existingModal = this.shadowRoot.getElementById('visualization-modal');
     if (existingModal) {
       if (this.currentChart) {
@@ -1924,48 +2351,10 @@ flex-direction: row;
       }
       this.shadowRoot.removeChild(existingModal);
     }
-    // Parameter keywords for identifying different types of parameters
-    const parameterKeywords = {
-      // Temperature parameters
-      'temperature': ['temperature', 'temp', 'ambient temperature', 'celsius', 'fahrenheit'],
 
-      // Humidity parameters
-      'humidity': ['humidity', 'relative humidity', 'moisture'],
-
-      // Air quality parameters
-      'co2': ['co2', 'carbon dioxide'],
-      'co': ['co', 'carbon monoxide'],
-      'pm2.5': ['pm2.5', 'particulate matter', 'fine particles'],
-      'pm10': ['pm10', 'coarse particles'],
-      'gas': ['gas', 'tvoc', 'voc'],
-      'air quality': ['aqi', 'air quality', 'air quality index'],
-
-      // Water parameters
-      'ph': ['ph', 'acidity'],
-      'turbidity': ['turbidity', 'clarity', 'water clarity'],
-      'tds': ['tds', 'total dissolved solids'],
-      'conductivity': ['conductivity', 'water conductivity'],
-      'water flow': ['flow', 'water flow', 'flow rate'],
-      'water level': ['water level', 'level'],
-
-      // Energy parameters
-      'voltage': ['voltage', 'volts'],
-      'current': ['current', 'ampere', 'amp'],
-      'power': ['power', 'watt', 'kw', 'kilowatt'],
-      'energy': ['energy', 'kwh', 'kilowatt hour'],
-
-      // Pressure parameters
-      'pressure': ['pressure', 'barometric pressure', 'atmospheric pressure'],
-
-      // Noise parameters
-      'noise': ['noise', 'sound', 'decibel', 'db']
-    };
-
-    // Function to extract parameter from query
-    const extractParameterFromQuery = (query) => {
+    // Helper: extract parameter from query
+    const extractParameterFromQuery = (query, parameterKeywords) => {
       query = query.toLowerCase();
-
-      // Check each parameter keyword
       for (const paramType in parameterKeywords) {
         for (const keyword of parameterKeywords[paramType]) {
           if (query.includes(keyword)) {
@@ -1973,157 +2362,167 @@ flex-direction: row;
           }
         }
       }
-
       return null;
     };
 
-    // Function to find matching parameter in data
-    const findMatchingParameter = (paramType, availableParams) => {
+    // Helper: find matching parameter in data
+    const findMatchingParameter = (paramType, availableParams, parameterKeywords) => {
       paramType = paramType.toLowerCase();
-
-      // First check for exact match
       for (const param of availableParams) {
-        if (param.toLowerCase() === paramType) {
-          return param;
-        }
+        if (param.toLowerCase() === paramType) return param;
       }
-
-      // Then check for keyword matches
       if (parameterKeywords[paramType]) {
         for (const keyword of parameterKeywords[paramType]) {
           for (const param of availableParams) {
-            if (param.toLowerCase().includes(keyword)) {
-              return param;
-            }
+            if (param.toLowerCase().includes(keyword)) return param;
           }
         }
       }
-
-      // Check if any available param contains the paramType
       for (const param of availableParams) {
-        if (param.toLowerCase().includes(paramType)) {
-          return param;
-        }
+        if (param.toLowerCase().includes(paramType)) return param;
       }
-
       return null;
+    };
+
+    // Parameter keywords for identifying different types of parameters
+    const parameterKeywords = {
+      'temperature': ['temperature', 'temp', 'ambient temperature', 'celsius', 'fahrenheit'],
+      'humidity': ['humidity', 'relative humidity', 'moisture'],
+      'co2': ['co2', 'carbon dioxide'],
+      'co': ['co', 'carbon monoxide'],
+      'pm2.5': ['pm2.5', 'particulate matter', 'fine particles'],
+      'pm10': ['pm10', 'coarse particles'],
+      'gas': ['gas', 'tvoc', 'voc'],
+      'air quality': ['aqi', 'air quality', 'air quality index'],
+      'ph': ['ph', 'acidity'],
+      'turbidity': ['turbidity', 'clarity', 'water clarity'],
+      'tds': ['tds', 'total dissolved solids'],
+      'conductivity': ['conductivity', 'water conductivity'],
+      'water flow': ['flow', 'water flow', 'flow rate'],
+      'water level': ['water level', 'level'],
+      'voltage': ['voltage', 'volts'],
+      'current': ['current', 'ampere', 'amp'],
+      'power': ['power', 'watt', 'kw', 'kilowatt'],
+      'energy': ['energy', 'kwh', 'kilowatt hour'],
+      'pressure': ['pressure', 'barometric pressure', 'atmospheric pressure'],
+      'noise': ['noise', 'sound', 'decibel', 'db']
     };
 
     // Create modal container
     const modal = document.createElement('div');
     modal.id = 'visualization-modal';
     modal.innerHTML = `
-        <style>
-          #visualization-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.4);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-          opacity: 0;
-          transition: opacity 0.3s ease-in-out;
-        }
-        #visualization-modal.show {
-          opacity: 1;
-        }
-        #visualization-content {
-          background-color: white;
-          width: 70%;
-          max-width: 800px;
-          max-height: 70vh;
-          border-radius: 12px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          overflow: hidden;
-          transform: scale(0.9);
-          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #visualization-modal.show #visualization-content {
-          transform: scale(1);
-        }
-        #visualization-close {
-          position: absolute;
-          top: 15px;
-          right: 15px;
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #6b7280;
-          transition: color 0.2s ease;
-        }
-        #visualization-close:hover {
-          color: #3b82f6;
-        }
-        #visualization-header {
-          padding: 15px 20px;
-          background-color: #f9fafb;
-          border-bottom: 1px solid #e5e7eb;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        #visualization-header h3 {
-          margin: 0;
-          font-size: 1.1rem;
-          color: #374151;
-          font-weight: 600;
-        }
-        #visualization-chart-container {
-          padding: 15px;
-          flex-grow: 1;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        #visualization-chart {
-          width: 100%;
-          max-height: 400px;
-        }
-        #loading-spinner {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 100%;
-        }
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e5e7eb;
-          border-top: 4px solid #3b82f6;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        #error-message {
-          color: #ef4444;
-          text-align: center;
-          padding: 20px;
-          background-color: #fef2f2;
-        }
-        </style>
-        <div id="visualization-content">
-          <div id="visualization-header">
-            <h3>Data Visualization</h3>
-            <button id="visualization-close">&times;</button>
-          </div>
-          <div id="loading-spinner" style="display: flex;">
-            <div class="spinner"></div>
-          </div>
-          <canvas id="visualization-chart" style="display: none;"></canvas>
-          <div id="error-message" style="display: none; color: red; text-align: center;"></div>
-        </div>
-      `;
+    <style>
+      #visualization-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    #visualization-modal.show {
+      opacity: 1;
+    }
+    #visualization-content {
+      background-color: white;
+      width: 70%;
+      max-width: 800px;
+      max-height: 70vh;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transform: scale(0.9);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #visualization-modal.show #visualization-content {
+      transform: scale(1);
+    }
+    #visualization-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+      transition: color 0.2s ease;
+    }
+    #visualization-close:hover {
+      color: #3b82f6;
+    }
+    #visualization-header {
+      padding: 15px 20px;
+      background-color: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #visualization-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #374151;
+      font-weight: 600;
+    }
+    #visualization-chart-container {
+      padding: 15px;
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #visualization-chart {
+      width: 100%;
+      max-height: 400px;
+    }
+    #loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #error-message {
+      color: #ef4444;
+      text-align: center;
+      padding: 20px;
+      background-color: #fef2f2;
+    }
+    </style>
+    <div id="visualization-content">
+      <div id="visualization-header">
+        <h3>Data Visualization</h3>
+        <button id="visualization-close">&times;</button>
+      </div>
+      <div id="loading-spinner" style="display: flex;">
+        <div class="spinner"></div>
+      </div>
+      <canvas id="visualization-chart" style="display: none;"></canvas>
+      <div id="error-message" style="display: none; color: red; text-align: center;"></div>
+    </div>
+  `;
 
     // Append to shadow root
     this.shadowRoot.appendChild(modal);
@@ -2131,153 +2530,84 @@ flex-direction: row;
       modal.classList.add('show');
     });
 
-    // Add close event listeners
-    const closeButton = this.shadowRoot.getElementById('visualization-close');
-    const modalContainer = this.shadowRoot.getElementById('visualization-modal');
-    const chartCanvas = this.shadowRoot.getElementById('visualization-chart');
-    const loadingSpinner = this.shadowRoot.getElementById('loading-spinner');
-    const errorMessage = this.shadowRoot.getElementById('error-message');
-
-    closeButton.addEventListener('click', () => {
-      this.shadowRoot.removeChild(modal);
-    });
-
-    // Close modal if clicked outside content
-    modalContainer.addEventListener('click', (event) => {
-      if (event.target === modalContainer) {
-        this.shadowRoot.removeChild(modal);
-      }
-    });
-
-    closeButton.addEventListener('click', () => {
-      // Destroy chart before removing modal
+    // Modal event listeners
+    const closeModal = () => {
       if (this.currentChart) {
         this.currentChart.destroy();
         this.currentChart = null;
       }
       this.shadowRoot.removeChild(modal);
+    };
+    const closeButton = this.shadowRoot.getElementById('visualization-close');
+    const modalContainer = this.shadowRoot.getElementById('visualization-modal');
+    closeButton.addEventListener('click', closeModal);
+    modalContainer.addEventListener('click', (event) => {
+      if (event.target === modalContainer) closeModal();
     });
 
-    // Close modal if clicked outside content
-    modalContainer.addEventListener('click', (event) => {
-      if (event.target === modalContainer) {
-        // Destroy chart before removing modal
-        if (this.currentChart) {
-          this.currentChart.destroy();
-          this.currentChart = null;
-        }
-        this.shadowRoot.removeChild(modal);
-      }
-    });
+    // Chart rendering logic
+    const loadingSpinner = this.shadowRoot.getElementById('loading-spinner');
+    const chartCanvas = this.shadowRoot.getElementById('visualization-chart');
+    const errorMessage = this.shadowRoot.getElementById('error-message');
 
     try {
-      // Decode and get the original query
       const decodedQuery = decodeURIComponent(query);
-
-      // Fetch data from the backend
       const response = await fetch("https://smartcitylivinglab.iiit.ac.in/chatbot-api/debug", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ query: decodedQuery })
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
-
-      // Determine if it's a temporal query
       const isTemporal = data.is_temporal || false;
+      const parameterType = extractParameterFromQuery(decodedQuery, parameterKeywords);
 
-      // Extract parameter from query
-      const parameterType = extractParameterFromQuery(decodedQuery);
-
-      // Hide loading spinner
       loadingSpinner.style.display = 'none';
       chartCanvas.style.display = 'block';
-
-      // Render chart using Chart.js
       const ctx = chartCanvas.getContext('2d');
 
-      // Prepare chart data and options
       let chartData, chartOptions, matchedParam;
-
       if (isTemporal) {
-        // Temporal data processing
         const temporalData = this.extractTemporalData(data);
         const availableParams = Object.keys(temporalData);
-
-        // Find matching parameter
-        matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
-
-        if (!matchedParam && availableParams.length > 0) {
-          // If no specific parameter found, use the first available parameter
-          matchedParam = availableParams[0];
-        }
-
-        if (matchedParam) {
-          const paramData = temporalData[matchedParam];
-
-          // Create a dataset for each unique node
-          const nodeDatasets = {};
-          paramData.labels.forEach((label, index) => {
-            const nodeId = paramData.nodeIds[index];
-            if (!nodeDatasets[nodeId]) {
-              nodeDatasets[nodeId] = {
-                label: `Node ${nodeId}`,
-                data: [],
-                labels: [],
-                borderColor: this.getNodeColor(nodeId),
-                backgroundColor: this.getNodeColor(nodeId, 0.1),
-                borderWidth: 2,
-                fill: true,
-                tension: 0.2
-              };
-            }
-            nodeDatasets[nodeId].data.push(paramData.values[index]);
-            nodeDatasets[nodeId].labels.push(label);
-          });
-
-          chartData = {
-            labels: [...new Set(paramData.labels)],
-            datasets: Object.values(nodeDatasets)
-          };
-
-          chartOptions = {
-            responsive: true,
-            scales: {
-              x: {
-                title: {
-                  display: true,
-                  text: 'Time'
-                }
-              },
-              y: {
-                title: {
-                  display: true,
-                  text: matchedParam
-                }
-              }
-            }
-          };
-        } else {
-          throw new Error('No suitable parameter found for visualization');
-        }
+        matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams, parameterKeywords) : availableParams[0];
+        if (!matchedParam) throw new Error('No suitable parameter found for visualization');
+        const paramData = temporalData[matchedParam];
+        const nodeDatasets = {};
+        paramData.labels.forEach((label, index) => {
+          const nodeId = paramData.nodeIds[index];
+          if (!nodeDatasets[nodeId]) {
+            nodeDatasets[nodeId] = {
+              label: `Node ${nodeId}`,
+              data: [],
+              labels: [],
+              borderColor: this.getNodeColor(nodeId),
+              backgroundColor: this.getNodeColor(nodeId, 0.1),
+              borderWidth: 2,
+              fill: true,
+              tension: 0.2
+            };
+          }
+          nodeDatasets[nodeId].data.push(paramData.values[index]);
+          nodeDatasets[nodeId].labels.push(label);
+        });
+        chartData = {
+          labels: [...new Set(paramData.labels)],
+          datasets: Object.values(nodeDatasets)
+        };
+        chartOptions = {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: 'Time' } },
+            y: { title: { display: true, text: matchedParam } }
+          }
+        };
       } else {
-        // Current data processing
         const currentData = this.extractCurrentData(data);
         const availableParams = Object.keys(currentData);
-
-        // Find matching parameter
-        matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams) : null;
-
-        if (!matchedParam) {
-          throw new Error(`No matching parameter found for "${decodedQuery}"`);
-        }
-
+        matchedParam = parameterType ? findMatchingParameter(parameterType, availableParams, parameterKeywords) : availableParams[0];
+        if (!matchedParam) throw new Error(`No matching parameter found for "${decodedQuery}"`);
         const paramData = currentData[matchedParam];
-
         chartData = {
           labels: paramData.labels,
           datasets: [{
@@ -2286,42 +2616,25 @@ flex-direction: row;
             backgroundColor: 'rgba(74, 123, 250, 0.7)'
           }]
         };
-
         chartOptions = {
           responsive: true,
           scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Nodes'
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: matchedParam
-              }
-            }
+            x: { title: { display: true, text: 'Nodes' } },
+            y: { title: { display: true, text: matchedParam } }
           }
         };
       }
-
-      // Render chart
 
       if (this.currentChart) {
         this.currentChart.destroy();
         this.currentChart = null;
       }
-
-      // Render chart
       this.currentChart = new Chart(ctx, {
         type: isTemporal ? 'line' : 'bar',
         data: chartData,
         options: chartOptions
       });
-
     } catch (error) {
-      // Show error message
       loadingSpinner.style.display = 'none';
       errorMessage.textContent = `Error: ${error.message}`;
       errorMessage.style.display = 'block';
@@ -2343,7 +2656,9 @@ flex-direction: row;
     ];
 
     // Use a simple hash to consistently map nodeId to a color
-    const colorIndex = parseInt(nodeId.replace(/\D/g, '')) % colors.length;
+    let colorIndex = parseInt(nodeId.replace(/\D/g, ''));
+    if (isNaN(colorIndex)) colorIndex = 0;
+    colorIndex = colorIndex % colors.length;
     return colors[colorIndex];
   }
 
@@ -2352,37 +2667,44 @@ flex-direction: row;
     const temporalData = {};
     const nodeData = data.node_data;
 
-    for (const nodeId in nodeData) {
-      const nodeInfo = nodeData[nodeId];
-      if (nodeInfo.filtered_data) {
-        for (const category in nodeInfo.filtered_data) {
-          const categoryData = nodeInfo.filtered_data[category];
-          if (categoryData.data && categoryData.data.length > 0) {
-            const firstDataPoint = categoryData.data[0];
-
-            for (const param in firstDataPoint) {
-              if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
-                if (!temporalData[param]) {
-                  temporalData[param] = {
-                    labels: [],
-                    values: [],
-                    nodeIds: []
-                  };
-                }
-
-                categoryData.data.forEach(point => {
-                  temporalData[param].labels.push(
-                    new Date(point.timestamp || point.created_at).toLocaleString()
-                  );
-                  temporalData[param].values.push(parseFloat(point[param]));
-                  temporalData[param].nodeIds.push(nodeId);
-                });
-              }
-            }
-          }
-        }
+    // Helper to process a single parameter
+    const processParam = (param, categoryData, nodeId) => {
+      if (!temporalData[param]) {
+        temporalData[param] = {
+          labels: [],
+          values: [],
+          nodeIds: []
+        };
       }
-    }
+      categoryData.data.forEach(point => {
+        temporalData[param].labels.push(
+          new Date(point.timestamp || point.created_at).toLocaleString()
+        );
+        temporalData[param].values.push(parseFloat(point[param]));
+        temporalData[param].nodeIds.push(nodeId);
+      });
+    };
+
+    // Helper to process a single category
+    const processCategory = (categoryData, nodeId) => {
+      if (categoryData.data && categoryData.data.length > 0) {
+        const firstDataPoint = categoryData.data[0];
+        Object.keys(firstDataPoint).forEach(param => {
+          if (!['node_id', 'timestamp', 'id', 'name', 'created_at'].includes(param)) {
+            processParam(param, categoryData, nodeId);
+          }
+        });
+      }
+    };
+
+    // Main loop
+    Object.entries(nodeData).forEach(([nodeId, nodeInfo]) => {
+      if (nodeInfo.filtered_data) {
+        Object.values(nodeInfo.filtered_data).forEach(categoryData => {
+          processCategory(categoryData, nodeId);
+        });
+      }
+    });
 
     return temporalData;
   }
@@ -2532,6 +2854,20 @@ flex-direction: row;
         // Create content container
         const messageContent = document.createElement("div");
 
+        // Helper to escape HTML
+        function escapeHTML(str) {
+          return str.replace(/[&<>"']/g, function(tag) {
+            const charsToReplace = {
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+            };
+            return charsToReplace[tag] || tag;
+          });
+        }
+
         if (hasVisualizationIcon) {
           // For messages with visualization icons, we need to handle them specially
           // Split the message into text part and icon part
@@ -2540,7 +2876,12 @@ flex-direction: row;
           // Add the text part
           if (textAndIcon[0]) {
             const textPart = document.createElement("div");
-            textPart.innerHTML = textAndIcon[0].replace(/\n/g, "<br>");
+            // Escape HTML for user messages
+            let safeText = textAndIcon[0];
+            if (msg.sender === 'user') {
+              safeText = escapeHTML(safeText);
+            }
+            textPart.innerHTML = safeText.replace(/\n/g, "<br>");
             messageContent.appendChild(textPart);
           }
 
@@ -2566,8 +2907,23 @@ flex-direction: row;
           }
         } else {
           // For regular messages
-          messageContent.innerHTML = msg.text.replace(/\n/g, "<br>");
+          let safeText = msg.text;
+          if (msg.sender === 'user') {
+            safeText = escapeHTML(safeText);
+          }
+          messageContent.innerHTML = safeText.replace(/\n/g, "<br>");
         }
+
+        // Add speaker icon for all messages
+        const speakerIcon = document.createElement("span");
+        speakerIcon.className = "speaker-icon";
+        speakerIcon.innerHTML = "🔊";
+        speakerIcon.title = "Click to listen";
+        speakerIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.speakText(msg.text, speakerIcon);
+        });
+        messageContent.appendChild(speakerIcon);
 
         // Add edit icon for user messages
         if (msg.sender === 'user') {
@@ -2600,10 +2956,17 @@ flex-direction: row;
   // Modify the render method to implement the toggle button and conditional display
   // Modify the render method to implement the requested changes
   render() {
+    const languages = ["English", "Hindi", "Telugu"];
+    const titles = { English: "SASI", Hindi: "सासी", Telugu: "సాసి" };
+    const subtitles = {
+      English: "Scalable Analytical Smart-city Interface",
+      Hindi: "स्केलेबल एनालिटिकल स्मार्ट-सिटी इंटरफेस",
+      Telugu: "స్కేలబుల్ అనలిటికల్ స్మార్ట్-సిటీ ఇంటర్‌ఫేస్"
+    };
     return html`
       <div class="chat-option" @click="${this.togglePopup}">
         <img
-          src="https://static-00.iconduck.com/assets.00/bot-icon-1024x806-28qq4icl.png"
+          src="https://smartcityresearch.github.io/ChatBot/static/images/chat-bot-logo.png"
           alt="Chat Icon"
           width="40"
           height="40"
@@ -2617,19 +2980,12 @@ flex-direction: row;
             alt="Chat Logo"
           />
           <div class="chat-title-container">
-    <div class="chat-title">SASI </div>
-    <div class="chat-subtitle">   Scalable Analytical Smart-city Interface
-    
-    </div>
-    
-  </div>
-  <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
-  
-          
+            <div class="chat-title">${titles[this.selectedLanguage]}</div>
+            <div class="chat-subtitle">${subtitles[this.selectedLanguage]}</div>
+          </div>
+          <div class="chat-minimize" @click="${this.togglePopup}">▼</div>
         </div>
         <div id="message-container" class="messages"></div>
-  
-  
         ${this.conversationOptions && this.conversationOptions.length > 0 ? html`
           <div class="conversation-options">
             ${this.conversationOptions.map(option => html`
@@ -2642,7 +2998,6 @@ flex-direction: row;
             `)}
           </div>
         ` : ''}
-        
         ${this.recommendedQuestions && this.recommendedQuestions.length > 0 ? html`
           <div class="question-toggle">
             <button 
@@ -2653,7 +3008,6 @@ flex-direction: row;
               <span class="arrow-icon ${this.showRecommendedQuestions ? 'rotate' : ''}">▼</span>
             </button>
           </div>
-          
           ${this.showRecommendedQuestions ? html`
             <div class="recommended-questions">
               ${this.recommendedQuestions.map(question => html`
@@ -2666,22 +3020,36 @@ flex-direction: row;
               `)}
             </div>
           ` : ''}
-          
-          <!-- Add "or" text here -->
           <div class="question-divider">or</div>
         ` : ''}
-        
         <div class="input-area">
           <input
             @keydown="${this.handleKeyDown}"
             type="text"
             @input="${this.handleUserInput}"
             .value="${this.userInput}"
-            placeholder="Enter any question..."
+            placeholder="${this.selectedLanguage === 'English' ? 'Enter any question...' : (this.selectedLanguage === 'Telugu' ? 'ఏదైనా ప్రశ్నను నమోదు చేయండి...' : (this.selectedLanguage === 'Hindi' ? 'कोई भी प्रश्न दर्ज करें...' : 'Enter any question...'))}"
           />
-          <button id="send-button" @click="${this.sendMessage}">
-            <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="Send" class="send-icon">
+          <button id="mic-button" @click="${this.startVoiceInput}" class="${this.isListening ? 'listening' : ''}" title="${this.selectedLanguage === 'English' ? 'Voice Input' : (this.selectedLanguage === 'Telugu' ? 'వాయిస్ ఇన్‌పుట్' : (this.selectedLanguage === 'Hindi' ? 'वॉइस इनपुट' : 'Voice Input'))}">
+            <img src="https://cdn-icons-png.flaticon.com/512/4980/4980251.png" alt="Microphone" class="mic-icon" style="${this.isListening ? 'filter: hue-rotate(330deg) saturate(3) brightness(0.8);' : ''}">
           </button>
+          <button id="send-button" @click="${this.sendMessage}" title="${this.selectedLanguage === 'English' ? 'Send' : (this.selectedLanguage === 'Telugu' ? 'పంపించండి' : (this.selectedLanguage === 'Hindi' ? 'भेजें' : 'Send'))}">
+            <img src="https://cdn-icons-png.flaticon.com/512/3682/3682321.png" alt="${this.selectedLanguage === 'English' ? 'Send' : (this.selectedLanguage === 'Telugu' ? 'పంపించండి' : (this.selectedLanguage === 'Hindi' ? 'भेజें' : 'Send'))}" class="send-icon">
+          </button>
+          <button id="translate-button" @click="${(e) => this.toggleLanguageDropdown(e)}" style="background: none; border: none; cursor: pointer; margin-left: 4px;">
+            <img src="https://res.cloudinary.com/dxoq1rrh4/image/upload/v1762950092/transalteimage_flaflk.png" alt="Translate" class="send-icon" style="width: 28px; height: 28px;" />
+          </button>
+          ${this.showLanguageDropdown
+            ? html`
+                <div style="position: absolute; bottom: 45px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                  ${languages.map(lang => html`
+                    <div style="padding: 8px 16px; cursor: pointer; ${this.selectedLanguage === lang ? 'background: #e6f0ff;' : ''}" @click="${() => this.selectLanguage(lang)}">
+                      ${lang}
+                    </div>
+                  `)}
+                </div>
+              `
+            : ''}
         </div>
       </div>
     `;
@@ -2689,3 +3057,7 @@ flex-direction: row;
 }
 
 customElements.define("chat-bot-component", ChatBotComponent);
+
+
+
+

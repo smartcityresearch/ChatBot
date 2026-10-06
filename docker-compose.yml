@@ -1,0 +1,8 @@
+services:
+  chatbot-backend:
+    build: .
+    container_name: chatbot-backend
+    env_file: .env
+    ports:
+      - "${CHATBOT_PORT:-8988}:8000"
+    restart: unless-stopped

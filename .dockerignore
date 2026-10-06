@@ -1,0 +1,9 @@
+.git
+.venv
+venv
+node_modules
+coverage
+tests
+.env
+*.xml
+.coverage
