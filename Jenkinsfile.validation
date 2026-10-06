@@ -1,0 +1,377 @@
+pipeline {
+
+    agent {
+        label 'scrc-staging'
+    }
+
+    options {
+        timestamps()
+        timeout(time: 45, unit: 'MINUTES')
+    }
+
+    parameters {
+        booleanParam(
+            name: 'RUN_LOAD_TEST',
+            defaultValue: false,
+            description: 'Run the basic load test against the staging backend'
+        )
+
+        string(
+            name: 'CHATBOT_PORT',
+            defaultValue: '8988',
+            description: 'Host port the staging backend is published on'
+        )
+
+        stashedFile(
+            name: 'BACKEND_ENV_FILE',
+            description: 'Upload the backend .env file (MISTRAL_API_KEY=...)'
+        )
+    }
+
+    environment {
+        REPO_URL    = 'https://github.com/smartcityresearch/ChatBot.git'
+        REPO_SLUG   = 'smartcityresearch/ChatBot'
+        BACKEND_URL = "http://127.0.0.1:${params.CHATBOT_PORT}"
+    }
+
+    stages {
+
+        stage('SCM Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+
+                    branches: [[
+                        name: '*/testing'
+                    ]],
+
+                    userRemoteConfigs: [[
+                        url: "${env.REPO_URL}",
+                        credentialsId: 'SmartCityOrganisation-GitHubApp'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Verify Repository') {
+            steps {
+                sh '''
+                    set -eux
+
+                    echo "===== Repository ====="
+                    git remote -v
+
+                    echo "===== Commit ====="
+                    git log -1 --oneline
+
+                    test -f chatbot.py
+                    test -f Dockerfile
+                    test -f docker-compose.yml
+                    test -f tests/e2e/test_staging_api.py
+                '''
+            }
+        }
+
+        stage('Prepare Environment File') {
+            steps {
+
+                echo '=================================================='
+                echo 'PREPARING ENVIRONMENT FILE'
+                echo '=================================================='
+
+                sh '''
+                    set -eux
+
+                    rm -f .env
+                    rm -rf .jenkins-env
+                    mkdir -p .jenkins-env/backend
+                '''
+
+                /*
+                * unstash is a Jenkins Pipeline step, so it must NOT
+                * be placed inside sh.
+                */
+                dir('.jenkins-env/backend') {
+                    unstash 'BACKEND_ENV_FILE'
+                }
+
+                sh '''
+                    set -eux
+
+                    BACKEND_UPLOADED_FILE=$(find .jenkins-env/backend -type f -print -quit)
+
+                    test -n "$BACKEND_UPLOADED_FILE"
+
+                    cp "$BACKEND_UPLOADED_FILE" .env
+
+                    chmod 600 .env
+
+                    rm -rf .jenkins-env
+
+                    ls -l .env
+
+                    echo "Backend .env prepared successfully."
+                '''
+            }
+        }
+
+        /*
+         * ========================================================
+         * BUILD
+         * ========================================================
+         */
+        stage('Build') {
+            steps {
+
+                echo '=================================================='
+                echo 'DOCKER BUILD'
+                echo '=================================================='
+
+                sh '''
+                    set -eux
+
+                    export CHATBOT_PORT="$CHATBOT_PORT"
+
+                    docker compose build
+
+                    echo
+                    echo "Docker build completed successfully."
+                '''
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * DEPLOY TO STAGING
+         * ========================================================
+         */
+        stage('Deploy to Staging') {
+            steps {
+
+                echo '=================================================='
+                echo "DEPLOYING TO STAGING ON PORT ${params.CHATBOT_PORT}"
+                echo '=================================================='
+
+                sh '''
+                    set -eux
+
+                    export CHATBOT_PORT="$CHATBOT_PORT"
+
+                    echo "Stopping existing containers..."
+
+                    docker compose down || true
+
+                    echo
+                    echo "Starting containers..."
+
+                    docker compose up -d
+
+                    echo
+                    echo "Container status:"
+
+                    docker compose ps
+
+                    echo
+                    echo "Waiting for backend at $BACKEND_URL ..."
+
+                    for i in $(seq 1 30); do
+                        if curl -fsS "$BACKEND_URL/" > /dev/null; then
+                            echo "Backend is up."
+                            exit 0
+                        fi
+                        sleep 2
+                    done
+
+                    echo "Backend did not become healthy in time."
+                    docker compose logs --tail=100
+                    exit 1
+                '''
+            }
+        }
+
+        stage('API Tests') {
+            steps {
+                sh '''
+                    set -eux
+
+                    echo "=================================================="
+                    echo "RUNNING API TESTS AGAINST STAGING"
+                    echo "=================================================="
+
+                    echo "Backend URL: $BACKEND_URL"
+
+                    rm -rf .venv-e2e
+                    python3.13 -m venv .venv-e2e
+                    . .venv-e2e/bin/activate
+
+                    pip install pytest requests
+
+                    mkdir -p tests/reports
+
+                    STAGING_URL="$BACKEND_URL" pytest tests/e2e/test_staging_api.py \
+                        -v \
+                        -p no:cacheprovider \
+                        --junitxml=tests/reports/staging-api-results.xml
+                '''
+            }
+
+            post {
+                always {
+                    junit(
+                        testResults: 'tests/reports/staging-api-results.xml',
+                        allowEmptyResults: true
+                    )
+                }
+            }
+        }
+
+        /*
+         * Security tests are intentionally not executed because
+         * the security test suite is not currently available.
+         */
+
+        stage('Load Tests') {
+            when {
+                expression {
+                    return params.RUN_LOAD_TEST
+                }
+            }
+
+            steps {
+                sh '''
+                    set -eux
+
+                    echo "=================================================="
+                    echo "RUNNING LOAD TESTS"
+                    echo "=================================================="
+
+                    . .venv-e2e/bin/activate
+
+                    BACKEND_URL="$BACKEND_URL" python tests/load/basic_load_test.py
+                '''
+            }
+        }
+
+        stage('Load Test Skipped') {
+            when {
+                expression {
+                    return !params.RUN_LOAD_TEST
+                }
+            }
+
+            steps {
+                echo 'Load testing was skipped.'
+            }
+        }
+
+        stage('Generate Validation Report') {
+            steps {
+                script {
+                    def loadTestStatus = params.RUN_LOAD_TEST ? 'PASS' : 'SKIPPED'
+
+                    writeFile(
+                        file: 'staging-validation-result.json',
+                        text: """{
+    "project": "ChatBot",
+    "branch": "testing",
+    "backend_url": "${env.BACKEND_URL}",
+    "api_tests": "PASS",
+    "security_tests": "NOT_RUN",
+    "load_test": "${loadTestStatus}",
+    "overall": "PASS"
+}
+"""
+                    )
+
+                    sh 'cat staging-validation-result.json'
+
+                    archiveArtifacts(
+                        artifacts: 'staging-validation-result.json',
+                        fingerprint: true
+                    )
+                }
+            }
+        }
+
+        stage('Create Testing → Main PR') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'Smart-City-GitHub-Token',
+                        variable: 'GITHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+
+                        set +x
+
+                        export GH_TOKEN="$GITHUB_TOKEN"
+
+                        REPO="$REPO_SLUG"
+
+                        echo "Checking for existing open PR..."
+                        echo "Repository: $REPO"
+                        echo "Base      : main"
+                        echo "Head      : testing"
+
+                        EXISTING_PR=$(
+                            gh pr list \
+                                --repo "$REPO" \
+                                --base main \
+                                --head testing \
+                                --state open \
+                                --json number,url \
+                                --jq 'if (.[0] != null) then [(.[0].number | tostring), .[0].url] | join("|") else empty end'
+                        )
+
+                        if [ -n "$EXISTING_PR" ]; then
+
+                            PR_NUMBER=$(echo "$EXISTING_PR" | cut -d'|' -f1)
+
+                            PR_URL=$(echo "$EXISTING_PR" | cut -d'|' -f2)
+
+                            echo
+                            echo "PULL REQUEST ALREADY EXISTS"
+                            echo "PR Number : #$PR_NUMBER"
+                            echo "PR URL    : $PR_URL"
+                            echo
+                            echo "No new Pull Request will be created."
+                            echo "This stage is considered SUCCESS."
+
+                        else
+
+                            echo
+                            echo "NO OPEN PR FOUND."
+                            echo "Creating Testing -> Main PR..."
+
+                            gh pr create \
+                                --repo "$REPO" \
+                                --base main \
+                                --head testing \
+                                --title "Auto PR: Testing -> Main" \
+                                --body "Automated Pull Request generated by Jenkins CI pipeline after successful staging deployment and API validation."
+
+                            echo
+                            echo "Pull Request created successfully."
+                        fi
+
+                        unset GH_TOKEN
+                        unset GITHUB_TOKEN
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Staging validation completed successfully (backend on port ${params.CHATBOT_PORT})."
+        }
+
+        failure {
+            echo 'Staging validation failed.'
+        }
+    }
+}
