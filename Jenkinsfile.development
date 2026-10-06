@@ -1,0 +1,478 @@
+pipeline {
+
+    agent {
+        label 'scrc-staging'
+    }
+
+    options {
+        timestamps()
+        timeout(time: 45, unit: 'MINUTES')
+    }
+
+    environment {
+        REPO_URL  = 'https://github.com/smartcityresearch/ChatBot.git'
+        REPO_SLUG = 'smartcityresearch/ChatBot'
+    }
+
+    stages {
+
+        /*
+         * ========================================================
+         * SCM CHECKOUT
+         * ========================================================
+         */
+        stage('SCM Checkout') {
+            steps {
+
+                echo '=================================================='
+                echo 'SCM CHECKOUT'
+                echo '=================================================='
+
+                checkout([
+                    $class: 'GitSCM',
+
+                    branches: [[
+                        name: '*/development'
+                    ]],
+
+                    userRemoteConfigs: [[
+                        url: "${env.REPO_URL}",
+
+                        credentialsId:
+                            'SmartCityOrganisation-GitHubApp'
+                    ]]
+                ])
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * VERIFY REPOSITORY
+         * ========================================================
+         */
+        stage('Verify Repository') {
+            steps {
+
+                echo '=================================================='
+                echo 'VERIFYING REPOSITORY'
+                echo '=================================================='
+
+                sh '''
+                    set -eux
+
+                    echo "Current directory:"
+                    pwd
+
+                    echo
+                    echo "Git commit:"
+                    git log -1 --oneline
+
+                    echo
+                    echo "Repository contents:"
+                    ls -la
+
+                    echo
+                    echo "Backend:"
+                    test -f chatbot.py
+                    test -f requirements.txt
+
+                    echo
+                    echo "Frontend:"
+                    test -d static/js
+                    test -f package.json
+                    test -f package-lock.json
+
+                    echo
+                    echo "Tests:"
+                    test -f tests/test_chatbot.py
+                    ls tests/js/*.test.js
+
+                    echo
+                    echo "Repository verification successful."
+                '''
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * SETUP
+         * ========================================================
+         */
+        stage('Setup') {
+
+            parallel {
+
+                stage('Setup Backend') {
+                    steps {
+
+                        sh '''
+                            set -eux
+
+                            rm -rf .venv
+
+                            python3.13 -m venv .venv
+
+                            . .venv/bin/activate
+
+                            python --version
+
+                            python -m pip install --upgrade pip
+
+                            pip install -r requirements.txt
+
+                            pip install pytest pytest-cov httpx ruff
+
+                            echo
+                            echo "Backend setup completed."
+                        '''
+                    }
+                }
+
+
+                stage('Setup Frontend') {
+                    steps {
+
+                        sh '''
+                            set -eux
+
+                            node --version
+                            npm --version
+
+                            npm ci --no-audit --no-fund
+
+                            echo
+                            echo "Frontend setup completed."
+                        '''
+                    }
+                }
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * CODE QUALITY
+         * ========================================================
+         *
+         * Only syntax errors and undefined names are checked.
+         * Findings mark the stage UNSTABLE instead of failing
+         * the build.
+         */
+        stage('Code Quality') {
+            steps {
+
+                echo '=================================================='
+                echo 'CODE QUALITY'
+                echo '=================================================='
+
+                sh '''
+                    set -eux
+
+                    . .venv/bin/activate
+
+                    python -m py_compile chatbot.py
+                '''
+
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh '''
+                        set -eux
+
+                        . .venv/bin/activate
+
+                        ruff check --select E9,F63,F7,F82 chatbot.py
+                    '''
+                }
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * UNIT TESTS
+         * ========================================================
+         */
+        stage('Unit Tests') {
+
+            parallel {
+
+                /*
+                 * ------------------------------------------------
+                 * BACKEND TESTS (pytest, LLM client is mocked)
+                 * ------------------------------------------------
+                 */
+                stage('Backend Unit Tests') {
+
+                    steps {
+
+                        sh '''
+                            set -eux
+
+                            . .venv/bin/activate
+
+                            mkdir -p tests/reports coverage/backend
+
+                            pytest tests/test_chatbot.py \
+                                -v \
+                                -p no:cacheprovider \
+                                --junitxml=tests/reports/backend-junit.xml \
+                                --cov=. \
+                                --cov-config=.coveragerc \
+                                --cov-report=term \
+                                --cov-report=xml:coverage/backend/coverage.xml
+                        '''
+                    }
+
+                    post {
+                        always {
+
+                            junit(
+                                testResults:
+                                    'tests/reports/backend-junit.xml',
+                                allowEmptyResults: true
+                            )
+
+                            archiveArtifacts(
+                                artifacts:
+                                    'coverage/backend/coverage.xml',
+                                allowEmptyArchive: true
+                            )
+                        }
+                    }
+                }
+
+
+                /*
+                 * ------------------------------------------------
+                 * FRONTEND TESTS (jest)
+                 * ------------------------------------------------
+                 */
+                stage('Frontend Unit Tests') {
+
+                    environment {
+                        JEST_JUNIT_OUTPUT_DIR  = 'tests/reports'
+                        JEST_JUNIT_OUTPUT_NAME = 'frontend-junit.xml'
+                    }
+
+                    steps {
+
+                        sh '''
+                            set -eux
+
+                            npx jest \
+                                --ci \
+                                --coverage \
+                                --reporters=default \
+                                --reporters=jest-junit
+                        '''
+                    }
+
+                    post {
+                        always {
+
+                            junit(
+                                testResults:
+                                    'tests/reports/frontend-junit.xml',
+                                allowEmptyResults: true
+                            )
+
+                            archiveArtifacts(
+                                artifacts:
+                                    'coverage/frontend/**',
+                                allowEmptyArchive: true
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * SONARQUBE ANALYSIS
+         * ========================================================
+         *
+         * Project key comes from sonar-project.properties.
+         */
+        stage('SonarQube Analysis') {
+            steps {
+
+                echo '=================================================='
+                echo 'SONARQUBE ANALYSIS'
+                echo '=================================================='
+
+                withSonarQubeEnv('SonarQube Intranet') {
+
+                    withCredentials([
+                        string(
+                            credentialsId:
+                                'sonarqube-global-analysis-token',
+
+                            variable:
+                                'SONAR_TOKEN'
+                        )
+                    ]) {
+
+                        sh '''
+                            set -eux
+
+                            sonar-scanner \
+                                -Dsonar.token="$SONAR_TOKEN" \
+                                -Dsonar.exclusions="tests/**/*,coverage/**/*,**/node_modules/**/*,.venv/**/*,**/*.test.js,babel.config.js,jest.config.js" \
+                                -Dsonar.python.coverage.reportPaths=coverage/backend/coverage.xml \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/frontend/lcov.info \
+                                -Dsonar.testExecutionReportPaths=
+                        '''
+                    }
+                }
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * QUALITY GATE
+         * ========================================================
+         */
+        stage('Quality Gate') {
+            steps {
+
+                echo '=================================================='
+                echo 'WAITING FOR SONARQUBE QUALITY GATE'
+                echo '=================================================='
+
+                timeout(
+                    time: 10,
+                    unit: 'MINUTES'
+                ) {
+
+                    waitForQualityGate(
+                        abortPipeline: true
+                    )
+                }
+            }
+        }
+
+        /*
+         * ========================================================
+         * CREATE PR DEVELOPMENT -> TESTING
+         * ========================================================
+         *
+         * If an open PR already exists:
+         *
+         *     Development -> Testing
+         *
+         * the pipeline does NOT create another PR.
+         *
+         * The stage is considered successful.
+         */
+        stage('Create PR to Testing') {
+            steps {
+
+                echo '=================================================='
+                echo 'CREATE DEVELOPMENT -> TESTING PR'
+                echo '=================================================='
+
+                withCredentials([
+                    string(
+                        credentialsId:
+                            'Smart-City-GitHub-Token',
+
+                        variable:
+                            'GITHUB_TOKEN'
+                    )
+                ]) {
+
+                    sh '''
+                        set -eu
+
+                        set +x
+
+                        export GH_TOKEN="$GITHUB_TOKEN"
+
+                        REPO="$REPO_SLUG"
+
+                        echo "Checking for existing open PR..."
+                        echo "Repository: $REPO"
+                        echo "Base      : testing"
+                        echo "Head      : development"
+
+                        EXISTING_PR=$(
+                            gh pr list \
+                                --repo "$REPO" \
+                                --base testing \
+                                --head development \
+                                --state open \
+                                --json number,url \
+                                --jq 'if (.[0] != null) then [(.[0].number | tostring), .[0].url] | join("|") else empty end'
+                        )
+
+                        if [ -n "$EXISTING_PR" ]; then
+
+                            PR_NUMBER=$(echo "$EXISTING_PR" | cut -d'|' -f1)
+
+                            PR_URL=$(echo "$EXISTING_PR" | cut -d'|' -f2)
+
+                            echo
+                            echo "PULL REQUEST ALREADY EXISTS"
+                            echo "PR Number : #$PR_NUMBER"
+                            echo "PR URL    : $PR_URL"
+                            echo
+                            echo "No new Pull Request will be created."
+                            echo "This stage is considered SUCCESS."
+
+                        else
+
+                            echo
+                            echo "NO OPEN PR FOUND."
+                            echo "Creating Development -> Testing PR..."
+
+                            gh pr create \
+                                --repo "$REPO" \
+                                --base testing \
+                                --head development \
+                                --title "Auto PR: Development -> Testing" \
+                                --body "Automated Pull Request generated by Jenkins CI pipeline after successful unit tests and SonarQube quality gate."
+
+                            echo
+                            echo "Pull Request created successfully."
+                        fi
+
+                        unset GH_TOKEN
+                        unset GITHUB_TOKEN
+                    '''
+                }
+            }
+        }
+    }
+
+
+    /*
+     * ============================================================
+     * POST ACTIONS
+     * ============================================================
+     */
+    post {
+
+        success {
+
+            echo '=================================================='
+            echo 'CI/CD PIPELINE SUCCESS'
+            echo '=================================================='
+
+            echo 'Pipeline completed successfully.'
+        }
+
+
+        failure {
+
+            echo '=================================================='
+            echo 'CI/CD PIPELINE FAILED'
+            echo '=================================================='
+
+            echo 'Pipeline failed.'
+        }
+    }
+}

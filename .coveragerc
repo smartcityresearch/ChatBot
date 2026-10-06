@@ -5,6 +5,7 @@ omit =
     */coverage/*
     */node_modules/*
     venv/*
+    .venv/*
 
 [report]
 exclude_lines =

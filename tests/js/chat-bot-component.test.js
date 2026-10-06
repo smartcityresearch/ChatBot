@@ -428,7 +428,9 @@ describe('ChatBotComponent additional coverage', () => {
     component.messages = [{ text: 'last correct', sender: 'bot' }];
     component.lastCorrectMessageIndex = 0;
     component.addMessage = jest.fn();
-    await component.handleOptionSelection('notfound');
+    // handleOptionSelection does not await sendMessage, so drive sendMessage directly
+    component.userInput = 'notfound';
+    await component.sendMessage();
     expect(component.addMessage).toHaveBeenCalledWith('Error: Invalid option selected', 'bot');
     expect(component.addMessage).toHaveBeenCalledWith('last correct', 'bot');
   });
